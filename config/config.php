@@ -19,7 +19,7 @@ define('APP_VERSION', '1.0.0');
 define('APP_DEBUG', true);
 
 // WebSocket Configuration
-define('WS_HOST', 'localhost');
+define('WS_HOST', '94.237.112.243');
 define('WS_PORT', 8080);
 
 // External APIs

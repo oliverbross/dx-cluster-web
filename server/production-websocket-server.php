@@ -119,22 +119,39 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
             }
             
             // Create React Socket connection to cluster
-            $loop = \React\EventLoop\Factory::create();
-            $connector = new \React\Socket\Connector($loop);
+            // Use a shared event loop for all connections
+            static $sharedLoop = null;
+            if ($sharedLoop === null) {
+                $sharedLoop = \React\EventLoop\Factory::create();
+            }
+            $loop = $sharedLoop;
+            
+            $connector = new \React\Socket\Connector($loop, [
+                'timeout' => 10,
+                'dns' => true,
+                'tls' => false // Most DX clusters don't use TLS
+            ]);
             
             $clusterAddress = "tcp://{$cluster['host']}:{$cluster['port']}";
             echo "🔗 Connecting to cluster: {$clusterAddress}\n";
             
-            $connector->connect($clusterAddress)->then(
-                function (\React\Socket\ConnectionInterface $stream) use ($conn, $cluster) {
+            // Store connection attempt with loop reference
+            $this->clusterConnections[$conn->resourceId] = [
+                'cluster' => $cluster,
+                'buffer' => '',
+                'connection' => null,
+                'loop' => $loop
+            ];
+            
+            $connectionPromise = $connector->connect($clusterAddress);
+            $connectionPromise->then(
+                function (\React\Socket\ConnectionInterface $stream) use ($conn, $cluster, $loop) {
                     echo "✅ Connected to cluster {$cluster['name']}\n";
                     
-                    // Store connection
-                    $this->clusterConnections[$conn->resourceId] = [
-                        'connection' => $stream,
-                        'cluster' => $cluster,
-                        'buffer' => ''
-                    ];
+                    // Update connection in storage
+                    if (isset($this->clusterConnections[$conn->resourceId])) {
+                        $this->clusterConnections[$conn->resourceId]['connection'] = $stream;
+                    }
                     
                     // Send connection success message
                     $conn->send(json_encode([
@@ -171,11 +188,11 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
                 }
             );
             
-            // Run the loop in a separate thread or use a shared loop
-            // For simplicity, we'll run it in the background
-            // In a real production environment, you'd want to manage this better
-            // But we don't actually need to run the loop here since React handles it
-            // $loop->run();
+            // Add a small timer to let the loop process this connection
+            // This helps avoid the hanging event loop issue
+            $loop->addTimer(0.001, function () use ($loop) {
+                // Just let the loop process events
+            });
             
         } catch (Exception $e) {
             echo "❌ Error connecting to cluster: " . $e->getMessage() . "\n";

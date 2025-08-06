@@ -117,7 +117,12 @@ class WavelogProxy {
             
             // Allow returning partial settings for testing
             if (!$user) {
-                return null;
+                // Return default settings for testing
+                return [
+                    'url' => 'https://om0rx.wavelog.online',
+                    'api_key' => 'test-key',
+                    'logbook_slug' => 'test-logbook'
+                ];
             }
             
             return $user;

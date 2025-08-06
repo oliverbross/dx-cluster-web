@@ -125,7 +125,7 @@ class AuthAPI {
         } catch (Exception $e) {
             error_log("Login error: " . $e->getMessage());
             http_response_code(500);
-            echo json_encode(['error' => 'Login failed']);
+            echo json_encode(['error' => 'Login failed: ' . $e->getMessage()]);
         }
     }
     
@@ -313,7 +313,7 @@ class AuthAPI {
             ]);
         } catch (Exception $e) {
             error_log("Session check error: " . $e->getMessage());
-            echo json_encode(['authenticated' => false]);
+            echo json_encode(['authenticated' => false, 'error' => $e->getMessage()]);
         }
     }
     

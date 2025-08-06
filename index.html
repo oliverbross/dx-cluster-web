@@ -412,7 +412,6 @@
     </main>
 
     <!-- Scripts -->
-    <script src="assets/js/mock-api.js"></script>
     <script src="assets/js/app.js"></script>
     <script src="assets/js/spot-parser.js"></script>
     <script src="assets/js/cluster.js"></script>
@@ -420,6 +419,14 @@
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/auth-ui.js"></script>
     <script src="assets/js/ui.js"></script>
+    <script>
+        // Global function to show settings section
+        function showSettings() {
+            if (window.dxApp) {
+                window.dxApp.showSection('settings');
+            }
+        }
+    </script>
     <!-- Login Modal -->
     <div class="modal" id="login-modal" style="display: none;">
         <div class="modal-overlay"></div>

@@ -37,6 +37,29 @@ A modern, responsive web application for ham radio operators to monitor DX clust
 - Socket extension for PHP
 - Modern web browser with WebSocket support
 
+## 🖥️ Windows Installation
+
+### 1. Install PHP
+1. Download PHP from [windows.php.net](https://windows.php.net/download/)
+2. Extract to `C:\php`
+3. Add `C:\php` to your system PATH
+4. Verify installation: `php --version`
+
+### 2. Install Composer
+1. Download Composer from [getcomposer.org](https://getcomposer.org/download/)
+2. Run the Windows installer
+3. Verify installation: `composer --version`
+
+### 3. Install PHP Dependencies
+```bash
+composer install
+```
+
+### 4. Install MySQL
+1. Download MySQL from [dev.mysql.com](https://dev.mysql.com/downloads/mysql/)
+2. Follow the installation wizard
+3. Remember your root password
+
 ## 🔧 Installation
 
 ### 1. Clone/Download Files
@@ -254,3 +277,77 @@ For support and questions:
 ---
 
 **73 de DX Cluster Web Team** 📡
+
+## 🚀 Quick Start for Developers
+
+### Prerequisites
+- PHP 7.4+ with Composer
+- MySQL 5.7+
+- Node.js (for development tools)
+
+### Installation Steps
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/dx-cluster-web.git
+   cd dx-cluster-web
+   ```
+
+2. **Install PHP dependencies:**
+   ```bash
+   composer install
+   ```
+
+3. **Set up the database:**
+   ```sql
+   CREATE DATABASE dx_cluster CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+   Import the schema:
+   ```bash
+   mysql -u root -p dx_cluster < database/schema.sql
+   ```
+
+4. **Configure the application:**
+   Edit `config/config.php` with your database credentials.
+
+5. **Start the WebSocket server:**
+   ```bash
+   php server/production-websocket-server.php
+   ```
+
+6. **Serve the web application:**
+   Use your preferred web server (Apache, Nginx) or PHP's built-in server:
+   ```bash
+   php -S localhost:8000
+   ```
+
+7. **Access the application:**
+   Open your browser to `http://localhost:8000`
+
+### Development Server
+
+For development, you can use the built-in PHP server:
+```bash
+php -S localhost:8000
+```
+
+Then start the WebSocket server in another terminal:
+```bash
+php server/production-websocket-server.php
+```
+
+### Production Deployment
+
+1. **Web Server Configuration:**
+   Ensure your web server is configured to serve the application and handle API requests.
+
+2. **WebSocket Server:**
+   Run the WebSocket server as a background service using systemd, supervisor, or similar.
+
+3. **Database:**
+   Ensure your database is properly configured and accessible.
+
+4. **Security:**
+   - Set proper file permissions
+   - Use HTTPS in production
+   - Configure firewall rules for WebSocket port (8080 by default)

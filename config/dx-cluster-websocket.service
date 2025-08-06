@@ -1,14 +1,17 @@
 [Unit]
-Description=DX Cluster WebSocket Server
+Description=DX Cluster Web WebSocket Server
 After=network.target
 
 [Service]
 Type=simple
 User=www-data
+Group=www-data
 WorkingDirectory=/path/to/dx-cluster-web
 ExecStart=/usr/bin/php /path/to/dx-cluster-web/server/production-websocket-server.php
 Restart=always
 RestartSec=3
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

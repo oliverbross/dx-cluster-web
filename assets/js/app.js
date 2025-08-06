@@ -336,7 +336,10 @@ class DXClusterApp {
             this.updateConnectionStatus('connecting');
             
             // Initialize WebSocket connection
-            const wsUrl = `ws://localhost:8080/cluster/${clusterId}`;
+            // Use server IP from config or default to current host
+            const wsHost = window.location.hostname;
+            const wsPort = 8080;
+            const wsUrl = `ws://${wsHost}:${wsPort}/cluster/${clusterId}`;
             this.websocket = new WebSocket(wsUrl);
             
             this.websocket.onopen = () => {

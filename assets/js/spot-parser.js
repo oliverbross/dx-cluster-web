@@ -1,6 +1,6 @@
-:/**
+/**
  * Enhanced DX Spot Parser for Real-time Processing
- * 
+ *
  * @author Kilo Code
  * @version 1.0.0
  */

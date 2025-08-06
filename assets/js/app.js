@@ -340,7 +340,8 @@ class DXClusterApp {
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const wsHost = window.location.hostname;
             const wsPort = 8080;
-            const wsUrl = `${protocol}://${wsHost}:${wsPort}/cluster/${clusterId}`;
+            const wsUrl = `${protocol}://${wsHost}:${wsPort}/?cluster=${clusterId}`;
+            console.log('Connecting to WebSocket:', wsUrl);
             this.websocket = new WebSocket(wsUrl);
             
             this.websocket.onopen = () => {
@@ -367,9 +368,18 @@ class DXClusterApp {
             
             this.websocket.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                this.showNotification('Connection failed', 'error');
+                this.showNotification('Connection failed: ' + error.message, 'error');
                 this.handleDisconnection();
             };
+            
+            // Add timeout for connection
+            setTimeout(() => {
+                if (this.websocket && this.websocket.readyState === WebSocket.CONNECTING) {
+                    console.error('WebSocket connection timeout');
+                    this.showNotification('Connection timeout', 'error');
+                    this.handleDisconnection();
+                }
+            }, 10000); // 10 second timeout
             
         } catch (error) {
             console.error('Connection error:', error);

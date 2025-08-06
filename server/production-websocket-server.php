@@ -75,6 +75,25 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
         }
     }
     
+    /**
+     * Handle new HTTP connection (for WebSocket upgrade)
+     */
+    public function onOpen(ConnectionInterface $conn) {
+        // Store the new connection
+        $this->clients->attach($conn);
+        echo "👤 New connection! ({$conn->resourceId})\n";
+        
+        // Check if this is a cluster connection request via query parameter
+        $query = $conn->httpRequest->getUri()->getQuery();
+        parse_str($query, $params);
+        
+        if (isset($params['cluster']) && is_numeric($params['cluster'])) {
+            echo "🔗 Cluster connection request detected: cluster {$params['cluster']}\n";
+            // Auto-connect to cluster if specified in query parameter
+            $this->connectToCluster($conn, $params['cluster']);
+        }
+    }
+    
     public function onClose(ConnectionInterface $conn) {
         // The connection is closed, remove it, as well as the reference to the cluster connection
         $this->disconnectFromCluster($conn);
@@ -161,7 +180,8 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
             // Run the loop in a separate thread or use a shared loop
             // For simplicity, we'll run it in the background
             // In a real production environment, you'd want to manage this better
-            $loop->run();
+            // But we don't actually need to run the loop here since React handles it
+            // $loop->run();
             
         } catch (Exception $e) {
             echo "❌ Error connecting to cluster: " . $e->getMessage() . "\n";
@@ -396,6 +416,14 @@ if (php_sapi_name() === 'cli') {
     
     $server->run();
 } else {
-    echo "This script must be run from command line\n";
+    // For web requests, check if it's a cluster connection request
+    if (isset($_GET['cluster']) && is_numeric($_GET['cluster'])) {
+        // This is a cluster connection request, but we need to run as CLI
+        // Return a proper error response
+        http_response_code(400);
+        echo json_encode(['error' => 'WebSocket connections must be initiated from the client']);
+    } else {
+        echo "This script must be run from command line for WebSocket server\n";
+    }
 }
 ?>

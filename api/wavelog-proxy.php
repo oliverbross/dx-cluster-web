@@ -45,8 +45,9 @@ class WavelogProxy {
             $input = json_decode(file_get_contents('php://input'), true);
             
             if (!$input || !isset($input['endpoint']) || !isset($input['data'])) {
+                error_log("Wavelog proxy: Invalid input - " . print_r($input, true));
                 http_response_code(400);
-                echo json_encode(['error' => 'Endpoint and data required']);
+                echo json_encode(['error' => 'Endpoint and data required', 'input' => $input]);
                 return;
             }
             
@@ -56,13 +57,27 @@ class WavelogProxy {
             // Get user's Wavelog settings from database
             $wavelogSettings = $this->getUserWavelogSettings();
             if (!$wavelogSettings) {
+                error_log("Wavelog proxy: User settings not found or incomplete");
                 http_response_code(400);
-                echo json_encode(['error' => 'Wavelog settings not configured']);
+                echo json_encode(['error' => 'Wavelog settings not configured', 'settings' => $wavelogSettings]);
+                return;
+            }
+            
+            // Validate settings
+            if (empty($wavelogSettings['url']) || empty($wavelogSettings['api_key'])) {
+                error_log("Wavelog proxy: Missing URL or API key in settings - " . print_r($wavelogSettings, true));
+                http_response_code(400);
+                echo json_encode(['error' => 'Wavelog URL or API key not configured', 'settings' => $wavelogSettings]);
                 return;
             }
             
             // Build full API URL
-            $apiUrl = rtrim($wavelogSettings['url'], '/') . '/api/' . ltrim($endpoint, '/');
+            $baseUrl = $wavelogSettings['url'] ?? '';
+            if (empty($baseUrl)) {
+                // Use default Wavelog URL from preferences if not set in user settings
+                $baseUrl = 'https://om0rx.wavelog.online'; // Default fallback
+            }
+            $apiUrl = rtrim($baseUrl, '/') . '/api/' . ltrim($endpoint, '/');
             
             // Make request to Wavelog API
             $response = $this->makeWavelogRequest($apiUrl, $data);
@@ -95,12 +110,13 @@ class WavelogProxy {
             
             $userId = $_SESSION['user_id'];
             
-            $sql = "SELECT wavelog_url as url, wavelog_api_key as api_key, wavelog_logbook_slug as logbook_slug 
+            $sql = "SELECT wavelog_url as url, wavelog_api_key as api_key, wavelog_logbook_slug as logbook_slug
                     FROM users WHERE id = ?";
             $result = $this->db->query($sql, [$userId]);
             $user = $result->fetch();
             
-            if (!$user || !$user['url'] || !$user['api_key']) {
+            // Allow returning partial settings for testing
+            if (!$user) {
                 return null;
             }
             
@@ -144,7 +160,8 @@ class WavelogProxy {
         // Check HTTP status code
         if ($httpCode >= 400) {
             error_log("Wavelog API returned HTTP $httpCode: " . $response);
-            return false;
+            // Return the error response so the frontend can handle it
+            return $response;
         }
         
         return $response;

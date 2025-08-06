@@ -22,7 +22,8 @@ class AuthManager {
             // Check if response is valid JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                console.warn('Session check returned non-JSON response');
+                const text = await response.text();
+                console.warn('Session check returned non-JSON response:', text.substring(0, 200));
                 this.isAuthenticated = false;
                 this.user = null;
                 this.updateUI();

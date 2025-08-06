@@ -1,0 +1,20 @@
+{
+    "name": "dx-cluster-web/websocket-server",
+    "description": "DX Cluster Web Application WebSocket Server",
+    "type": "project",
+    "require": {
+        "cboden/ratchet": "^0.4.4",
+        "react/socket": "^1.12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DXCluster\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Kilo Code",
+            "email": "kilocode@example.com"
+        }
+    ]
+}

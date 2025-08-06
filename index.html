@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DX Cluster Web - Ham Radio DX Monitoring</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="flex items-center justify-between">
+                <a href="#" class="navbar-brand">
+                    <i class="fas fa-satellite-dish"></i>
+                    DX Cluster Web
+                </a>
+                
+                <ul class="navbar-nav">
+                    <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
+                    <li><a href="#spots" class="nav-link">DX Spots</a></li>
+                    <li><a href="#terminal" class="nav-link">Terminal</a></li>
+                    <li><a href="#settings" class="nav-link">Settings</a></li>
+                </ul>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Connection Status -->
+                    <div class="status-indicator status-disconnected" id="connection-status">
+                        <i class="fas fa-circle"></i>
+                        <span>Disconnected</span>
+                    </div>
+                    
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-outline btn-sm" id="theme-toggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <!-- User Menu -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline btn-sm" id="user-menu">
+                            <i class="fas fa-user"></i>
+                            <span id="user-callsign">Guest</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container" style="padding-top: 2rem;">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="section active">
+            <div class="grid grid-cols-1 gap-6 mb-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h1 class="text-xl font-bold">
+                            <i class="fas fa-tachometer-alt"></i>
+                            DX Cluster Dashboard
+                        </h1>
+                        <p class="text-sm text-secondary mt-2">
+                            Real-time DX spot monitoring with Wavelog integration
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold text-primary" id="total-spots">0</div>
+                        <div class="text-sm text-secondary">Total Spots</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold" style="color: var(--new-dxcc)" id="new-dxcc-count">0</div>
+                        <div class="text-sm text-secondary">New DXCC</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold" style="color: var(--new-band)" id="new-band-count">0</div>
+                        <div class="text-sm text-secondary">New Band</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold" style="color: var(--new-mode)" id="new-mode-count">0</div>
+                        <div class="text-sm text-secondary">New Mode</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-2 gap-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-plug"></i>
+                            Cluster Connection
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Select DX Cluster</label>
+                            <select class="form-select" id="cluster-select">
+                                <option value="">Loading clusters...</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-primary" id="connect-btn">
+                                <i class="fas fa-play"></i>
+                                Connect
+                            </button>
+                            <button class="btn btn-danger" id="disconnect-btn" disabled>
+                                <i class="fas fa-stop"></i>
+                                Disconnect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-cog"></i>
+                            Wavelog Integration
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">API Key Status</label>
+                            <div class="status-indicator status-disconnected" id="wavelog-status">
+                                <i class="fas fa-times"></i>
+                                <span>Not Configured</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" onclick="showSettings()">
+                            <i class="fas fa-key"></i>
+                            Configure API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DX Spots Section -->
+        <section id="spots-section" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold">
+                            <i class="fas fa-satellite"></i>
+                            DX Spots
+                        </h2>
+                        <div class="flex items-center gap-4">
+                            <!-- Filters -->
+                            <select class="form-select" id="band-filter" style="width: auto;">
+                                <option value="">All Bands</option>
+                                <option value="160m">160m</option>
+                                <option value="80m">80m</option>
+                                <option value="40m">40m</option>
+                                <option value="20m">20m</option>
+                                <option value="17m">17m</option>
+                                <option value="15m">15m</option>
+                                <option value="12m">12m</option>
+                                <option value="10m">10m</option>
+                                <option value="6m">6m</option>
+                            </select>
+                            
+                            <select class="form-select" id="mode-filter" style="width: auto;">
+                                <option value="">All Modes</option>
+                                <option value="CW">CW</option>
+                                <option value="SSB">SSB</option>
+                                <option value="FT8">FT8</option>
+                                <option value="FT4">FT4</option>
+                                <option value="RTTY">RTTY</option>
+                                <option value="PSK31">PSK31</option>
+                            </select>
+                            
+                            <button class="btn btn-outline btn-sm" id="clear-spots">
+                                <i class="fas fa-trash"></i>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table" id="spots-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Callsign</th>
+                                    <th>Frequency</th>
+                                    <th>Band</th>
+                                    <th>Mode</th>
+                                    <th>Spotter</th>
+                                    <th>Comment</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spots-tbody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-8 text-secondary">
+                                        <i class="fas fa-satellite-dish text-4xl mb-4 block"></i>
+                                        No spots received yet. Connect to a DX cluster to start monitoring.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Terminal Section -->
+        <section id="terminal-section" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-xl font-bold">
+                        <i class="fas fa-terminal"></i>
+                        DX Cluster Terminal
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="terminal">
+                        <div class="terminal-header">
+                            <div class="flex items-center gap-2">
+                                <div style="width: 12px; height: 12px; background: #ff5f56; border-radius: 50%;"></div>
+                                <div style="width: 12px; height: 12px; background: #ffbd2e; border-radius: 50%;"></div>
+                                <div style="width: 12px; height: 12px; background: #27ca3f; border-radius: 50%;"></div>
+                            </div>
+                            <span class="text-sm">DX Cluster Terminal</span>
+                        </div>
+                        <div class="terminal-body" id="terminal-output">
+                            <div>DX Cluster Web Terminal v1.0.0</div>
+                            <div>Connect to a cluster to start sending commands...</div>
+                            <div>&nbsp;</div>
+                        </div>
+                        <div class="px-4 pb-4">
+                            <div class="flex items-center gap-2">
+                                <span style="color: #00ff00;">$</span>
+                                <input type="text" class="terminal-input" id="terminal-input" placeholder="Enter command..." disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Command Macros -->
+            <div class="card mt-6">
+                <div class="card-header">
+                    <h3 class="font-bold">Quick Commands</h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-4 gap-2">
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/dx">
+                            <i class="fas fa-list"></i>
+                            Show DX
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/dx/10">
+                            <i class="fas fa-clock"></i>
+                            Last 10
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/wwv">
+                            <i class="fas fa-broadcast-tower"></i>
+                            WWV
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/wcy">
+                            <i class="fas fa-globe"></i>
+                            WCY
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/qrz">
+                            <i class="fas fa-search"></i>
+                            QRZ
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/heading">
+                            <i class="fas fa-compass"></i>
+                            Heading
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/sun">
+                            <i class="fas fa-sun"></i>
+                            Sun
+                        </button>
+                        <button class="btn btn-outline btn-sm macro-btn" data-command="sh/moon">
+                            <i class="fas fa-moon"></i>
+                            Moon
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="section">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Wavelog Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-book"></i>
+                            Wavelog Integration
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Wavelog URL</label>
+                            <input type="url" class="form-input" id="wavelog-url" placeholder="https://your-wavelog.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">API Key</label>
+                            <input type="password" class="form-input" id="wavelog-api-key" placeholder="Your API key">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Logbook Slug</label>
+                            <input type="text" class="form-input" id="wavelog-logbook-slug" placeholder="your-logbook-slug">
+                        </div>
+                        <button class="btn btn-primary" id="test-wavelog">
+                            <i class="fas fa-vial"></i>
+                            Test Connection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User Preferences -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-user-cog"></i>
+                            User Preferences
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Your Callsign</label>
+                            <input type="text" class="form-input" id="user-callsign-input" placeholder="Your callsign">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Theme</label>
+                            <select class="form-select" id="theme-select">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Auto-connect on startup</label>
+                            <input type="checkbox" id="auto-connect" style="margin-right: 8px;">
+                            <span class="text-sm">Automatically connect to default cluster</span>
+                        </div>
+                        <button class="btn btn-primary" id="save-preferences">
+                            <i class="fas fa-save"></i>
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color Settings -->
+            <div class="card mt-6">
+                <div class="card-header">
+                    <h3 class="font-bold">
+                        <i class="fas fa-palette"></i>
+                        Spot Color Coding
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-5 gap-4">
+                        <div class="form-group">
+                            <label class="form-label">New DXCC</label>
+                            <input type="color" class="form-input" id="color-new-dxcc" value="#ef4444">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Band</label>
+                            <input type="color" class="form-input" id="color-new-band" value="#22c55e">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Mode</label>
+                            <input type="color" class="form-input" id="color-new-mode" value="#3b82f6">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Worked</label>
+                            <input type="color" class="form-input" id="color-worked" value="#f59e0b">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Confirmed</label>
+                            <input type="color" class="form-input" id="color-confirmed" value="#6b7280">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="assets/js/mock-api.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script src="assets/js/cluster.js"></script>
+    <script src="assets/js/wavelog.js"></script>
+    <script src="assets/js/ui.js"></script>
+</body>
+</html>

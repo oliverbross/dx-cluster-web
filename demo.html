@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DX Cluster Web - Demo Version</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+    
+    <style>
+        .demo-banner {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .demo-banner i {
+            margin-right: 0.5rem;
+        }
+        
+        .demo-spot {
+            animation: slideInFromRight 0.5s ease-out;
+        }
+        
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Banner -->
+    <div class="demo-banner">
+        <i class="fas fa-flask"></i>
+        <strong>DEMO MODE</strong> - This is a demonstration of the DX Cluster Web Application with simulated data
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="flex items-center justify-between">
+                <a href="#" class="navbar-brand">
+                    <i class="fas fa-satellite-dish"></i>
+                    DX Cluster Web
+                </a>
+                
+                <ul class="navbar-nav">
+                    <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
+                    <li><a href="#spots" class="nav-link">DX Spots</a></li>
+                    <li><a href="#terminal" class="nav-link">Terminal</a></li>
+                    <li><a href="#settings" class="nav-link">Settings</a></li>
+                </ul>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Connection Status -->
+                    <div class="status-indicator status-connected" id="connection-status">
+                        <i class="fas fa-circle"></i>
+                        <span>Demo Mode</span>
+                    </div>
+                    
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-outline btn-sm" id="theme-toggle">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    
+                    <!-- User Menu -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline btn-sm" id="user-menu">
+                            <i class="fas fa-user"></i>
+                            <span id="user-callsign">DX-WEB</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container" style="padding-top: 2rem;">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="section active">
+            <div class="grid grid-cols-1 gap-6 mb-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h1 class="text-xl font-bold">
+                            <i class="fas fa-tachometer-alt"></i>
+                            DX Cluster Dashboard
+                        </h1>
+                        <p class="text-sm text-secondary mt-2">
+                            Real-time DX spot monitoring with Wavelog integration - Demo Version
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold text-primary" id="total-spots">12</div>
+                        <div class="text-sm text-secondary">Total Spots</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold" style="color: var(--new-dxcc)" id="new-dxcc-count">3</div>
+                        <div class="text-sm text-secondary">New DXCC</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold" style="color: var(--new-band)" id="new-band-count">5</div>
+                        <div class="text-sm text-secondary">New Band</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="text-2xl font-bold" style="color: var(--new-mode)" id="new-mode-count">2</div>
+                        <div class="text-sm text-secondary">New Mode</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-2 gap-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-plug"></i>
+                            Cluster Connection
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Select DX Cluster</label>
+                            <select class="form-select" id="cluster-select">
+                                <option value="1">DX Summit (dxc.dxsummit.fi:8000)</option>
+                                <option value="2">OH2AQ (oh2aq.kolumbus.fi:41112)</option>
+                                <option value="3">VE7CC (ve7cc.net:23)</option>
+                                <option value="4">W3LPL (w3lpl.net:7300)</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-primary" id="connect-btn" onclick="demoConnect()">
+                                <i class="fas fa-play"></i>
+                                Connect (Demo)
+                            </button>
+                            <button class="btn btn-danger" id="disconnect-btn" onclick="demoDisconnect()">
+                                <i class="fas fa-stop"></i>
+                                Disconnect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-cog"></i>
+                            Wavelog Integration
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">API Key Status</label>
+                            <div class="status-indicator status-connected" id="wavelog-status">
+                                <i class="fas fa-check"></i>
+                                <span>Demo Mode</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" onclick="showSettings()">
+                            <i class="fas fa-key"></i>
+                            Configure API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DX Spots Section -->
+        <section id="spots-section" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold">
+                            <i class="fas fa-satellite"></i>
+                            DX Spots
+                        </h2>
+                        <div class="flex items-center gap-4">
+                            <!-- Filters -->
+                            <select class="form-select" id="band-filter" style="width: auto;">
+                                <option value="">All Bands</option>
+                                <option value="160m">160m</option>
+                                <option value="80m">80m</option>
+                                <option value="40m">40m</option>
+                                <option value="20m">20m</option>
+                                <option value="17m">17m</option>
+                                <option value="15m">15m</option>
+                                <option value="12m">12m</option>
+                                <option value="10m">10m</option>
+                                <option value="6m">6m</option>
+                            </select>
+                            
+                            <select class="form-select" id="mode-filter" style="width: auto;">
+                                <option value="">All Modes</option>
+                                <option value="CW">CW</option>
+                                <option value="SSB">SSB</option>
+                                <option value="FT8">FT8</option>
+                                <option value="FT4">FT4</option>
+                                <option value="RTTY">RTTY</option>
+                                <option value="PSK31">PSK31</option>
+                            </select>
+                            
+                            <button class="btn btn-outline btn-sm" onclick="generateDemoSpot()">
+                                <i class="fas fa-plus"></i>
+                                Add Demo Spot
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table" id="spots-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Callsign</th>
+                                    <th>Frequency</th>
+                                    <th>Band</th>
+                                    <th>Mode</th>
+                                    <th>Spotter</th>
+                                    <th>Comment</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spots-tbody">
+                                <!-- Demo spots will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Terminal Section -->
+        <section id="terminal-section" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-xl font-bold">
+                        <i class="fas fa-terminal"></i>
+                        DX Cluster Terminal
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="terminal">
+                        <div class="terminal-header">
+                            <div class="flex items-center gap-2">
+                                <div style="width: 12px; height: 12px; background: #ff5f56; border-radius: 50%;"></div>
+                                <div style="width: 12px; height: 12px; background: #ffbd2e; border-radius: 50%;"></div>
+                                <div style="width: 12px; height: 12px; background: #27ca3f; border-radius: 50%;"></div>
+                            </div>
+                            <span class="text-sm">DX Cluster Terminal (Demo)</span>
+                        </div>
+                        <div class="terminal-body" id="terminal-output">
+                            <div>DX Cluster Web Terminal v1.0.0 - Demo Mode</div>
+                            <div>Connected to DX Summit (Demo)</div>
+                            <div>Login: DX-WEB</div>
+                            <div>DX de W1AW: 14205.0 JA1ABC CQ DX 1234Z</div>
+                            <div>DX de VE3XYZ: 21025.0 VK2DEF up 5 0945Z</div>
+                            <div>DX de G0ABC: 7035.0 ZL1GHI CW QSX 1205Z</div>
+                            <div>&nbsp;</div>
+                        </div>
+                        <div class="px-4 pb-4">
+                            <div class="flex items-center gap-2">
+                                <span style="color: #00ff00;">$</span>
+                                <input type="text" class="terminal-input" id="terminal-input" placeholder="Enter command..." onkeypress="handleTerminalInput(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Command Macros -->
+            <div class="card mt-6">
+                <div class="card-header">
+                    <h3 class="font-bold">Quick Commands</h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-4 gap-2">
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/dx')">
+                            <i class="fas fa-list"></i>
+                            Show DX
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/dx/10')">
+                            <i class="fas fa-clock"></i>
+                            Last 10
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/wwv')">
+                            <i class="fas fa-broadcast-tower"></i>
+                            WWV
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/wcy')">
+                            <i class="fas fa-globe"></i>
+                            WCY
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/qrz')">
+                            <i class="fas fa-search"></i>
+                            QRZ
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/heading')">
+                            <i class="fas fa-compass"></i>
+                            Heading
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/sun')">
+                            <i class="fas fa-sun"></i>
+                            Sun
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="sendDemoCommand('sh/moon')">
+                            <i class="fas fa-moon"></i>
+                            Moon
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="section">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Wavelog Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-book"></i>
+                            Wavelog Integration
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Wavelog URL</label>
+                            <input type="url" class="form-input" id="wavelog-url" placeholder="https://your-wavelog.com" value="https://demo.wavelog.org">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">API Key</label>
+                            <input type="password" class="form-input" id="wavelog-api-key" placeholder="Your API key" value="demo-api-key-12345">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Logbook Slug</label>
+                            <input type="text" class="form-input" id="wavelog-logbook-slug" placeholder="your-logbook-slug" value="demo-logbook">
+                        </div>
+                        <button class="btn btn-primary" onclick="testDemoWavelog()">
+                            <i class="fas fa-vial"></i>
+                            Test Connection (Demo)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User Preferences -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">
+                            <i class="fas fa-user-cog"></i>
+                            User Preferences
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Your Callsign</label>
+                            <input type="text" class="form-input" id="user-callsign-input" placeholder="Your callsign" value="DX-WEB">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Theme</label>
+                            <select class="form-select" id="theme-select">
+                                <option value="dark" selected>Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Auto-connect on startup</label>
+                            <input type="checkbox" id="auto-connect" style="margin-right: 8px;">
+                            <span class="text-sm">Automatically connect to default cluster</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveDemoPreferences()">
+                            <i class="fas fa-save"></i>
+                            Save Settings (Demo)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color Settings -->
+            <div class="card mt-6">
+                <div class="card-header">
+                    <h3 class="font-bold">
+                        <i class="fas fa-palette"></i>
+                        Spot Color Coding
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-5 gap-4">
+                        <div class="form-group">
+                            <label class="form-label">New DXCC</label>
+                            <input type="color" class="form-input" id="color-new-dxcc" value="#ef4444">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Band</label>
+                            <input type="color" class="form-input" id="color-new-band" value="#22c55e">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Mode</label>
+                            <input type="color" class="form-input" id="color-new-mode" value="#3b82f6">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Worked</label>
+                            <input type="color" class="form-input" id="color-worked" value="#f59e0b">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Confirmed</label>
+                            <input type="color" class="form-input" id="color-confirmed" value="#6b7280">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Demo JavaScript -->
+    <script>
+        // Demo data and functionality
+        const demoSpots = [
+            { callsign: 'JA1ABC', frequency: 14205.0, band: '20m', mode: 'CW', spotter: 'W1AW', comment: 'CQ DX', status: 'new-dxcc', time: '12:34' },
+            { callsign: 'VK2DEF', frequency: 21025.0, band: '15m', mode: 'SSB', spotter: 'VE3XYZ', comment: 'up 5', status: 'new-band', time: '09:45' },
+            { callsign: 'ZL1GHI', frequency: 7035.0, band: '40m', mode: 'CW', spotter: 'G0ABC', comment: 'CW QSX', status: 'new-mode', time: '12:05' },
+            { callsign: 'PY2JKL', frequency: 28400.0, band: '10m', mode: 'FT8', spotter: 'W6XYZ', comment: 'FT8', status: 'worked', time: '15:22' },
+            { callsign: 'OH1MNO', frequency: 14074.0, band: '20m', mode: 'FT8', spotter: 'SM7ABC', comment: 'FT8 DX', status: 'confirmed', time: '11:18' }
+        ];
+
+        let spotIndex = 0;
+
+        // Initialize demo
+        document.addEventListener('DOMContentLoaded', function() {
+            setupNavigation();
+            setupThemeToggle();
+            loadDemoSpots();
+            showSection('dashboard');
+        });
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = e.target.getAttribute('href').substring(1);
+                    showSection(target);
+                });
+            });
+        }
+
+        function setupThemeToggle() {
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                const html = document.documentElement;
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', newTheme);
+                
+                const icon = document.querySelector('#theme-toggle i');
+                icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            });
+        }
+
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+                section.style.display = 'none';
+            });
+
+            const targetSection = document.getElementById(`${sectionName}-section`);
+            if (targetSection) {
+                targetSection.classList.add('active');
+                targetSection.style.display = 'block';
+            }
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`[href="#${sectionName}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        }
+
+        function loadDemoSpots() {
+            const tbody = document.getElementById('spots-tbody');
+            demoSpots.forEach(spot => {
+                addSpotToTable(spot);
+            });
+        }
+
+        function addSpotToTable(spot) {
+            const tbody = document.getElementById('spots-tbody');
+            const row = document.createElement('tr');
+            row.className = `spot-${spot.status} demo-spot`;
+            
+            const statusText = {
+                'new-dxcc': 'New DXCC',
+                'new-band': 'New Band',
+                'new-mode': 'New Mode',
+                'worked': 'Worked',
+                'confirmed': 'Confirmed'
+            }[spot.status];
+            
+            row.innerHTML = `
+                <td class="font-mono text-sm">${spot.time}</td>
+                <td class="font-mono font-bold">${spot.callsign}</td>
+                <td class="font-mono">${spot.frequency.toFixed(1)}</td>
+                <td class="font-bold">${spot.band}</td>
+                <td>${spot.mode}</td>
+                <td class="font-mono">${spot.spotter}</td>
+                <td class="text-sm">${spot.comment}</td>
+                <td>
+                    <span class="status-indicator status-${spot.status.replace('-', '')}">
+                        ${statusText}
+                    </span>
+                </td>
+            `;
+            
+            tbody.insertBefore(row, tbody.firstChild);
+        }
+
+        function generateDemoSpot() {
+            const callsigns = ['JA1XYZ', 'VK3ABC', 'ZL2DEF', 'PY5GHI', 'OH8JKL', 'SM6MNO', 'LA9PQR'];
+            const frequencies = [14205.0, 21025.0, 7035.0, 28400.0, 18100.0, 24920.0, 10125.0];
+            const modes = ['CW', 'SSB', 'FT8', 'FT4', 'RTTY'];
+            const statuses = ['new-dxcc', 'new-band', 'new-mode', 'worked', 'confirmed'];
+            const spotters = ['W1ABC', 'VE3XYZ', 'G0DEF', 'JA1GHI'];
+            
+            const spot = {
+                callsign: callsigns[Math.floor(Math.random() * callsigns.length)],
+                frequency: frequencies[Math.floor(Math.random() * frequencies.length)],
+                mode: modes[Math.floor(Math.random() * modes.length)],
+                spotter: spotters[Math.floor(Math.random() * spotters.length)],
+                comment: 'CQ DX',
+                status: statuses[Math.floor(Math.random() * statuses.length)],
+                time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+            };
+            
+            // Determine band from frequency
+            if (spot.frequency >= 14000 && spot.frequency <= 14350) spot.band = '20m';
+            else if (spot.frequency >= 21000 && spot.frequency <= 21450) spot.band = '15m';
+            else if (spot.frequency >= 7000 && spot.frequency <= 7300) spot.band = '40m';
+            else if (spot.frequency >= 28000 && spot.frequency <= 29700) spot.band = '10m';
+            else spot.band = '20m';
+            
+            addSpotToTable(spot);
+            showNotification('Demo spot added!', 'success');
+        }
+
+        function demoConnect() {
+            showNotification('Connected to demo cluster!', 'success');
+            addTerminalLine('Connected to DX Summit (Demo Mode)');
+            addTerminalLine('Login: DX-WEB');
+            addTerminalLine('Welcome to the demo cluster!');
+        }
+
+        function demoDisconnect() {
+            showNotification('Disconnected from demo cluster', 'info');
+            addTerminalLine('Disconnected from cluster');
+        }
+
+        function testDemoWavelog() {
+            showNotification('Wavelog connection test successful! (Demo)', 'success');
+        }
+
+        function saveDemoPreferences() {
+            showNotification('Preferences saved! (Demo)', 'success');
+        }
+
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const command = event.target.value;
+                if (command.trim()) {
+                    sendDemoCommand(command);
+                    event.target.value = '';
+                }
+            }
+        }
+
+        function sendDemoCommand(command) {
+            addTerminalLine(`> ${command}`);
+            
+            setTimeout(() => {
+                const responses = {
+                    'sh/dx': 'DX de W1AW: 14205.0 JA1ABC CQ DX 1234Z\nDX de VE3XYZ: 21025.0 VK2DEF up 5 0945Z',
+                    'sh/dx/10': 'Last 10 DX spots:\nDX de G0ABC: 7035.0 ZL1GHI CW QSX 1205Z\nDX de SM7DEF: 28400.0 PY2JKL FT8 1522Z',
+                    'sh/wwv': 'WWV de WWV: SFI=150, A=5, K=2, forecast...',
+                    'sh/wcy': 'WCY de G0KTN: K=2 expK=2 A=5 R=12 SFI=150 SA=qui GMF=qui Au=up',
+                    'sh/qrz': 'QRZ lookup service available',
+                    'sh/heading': 'Heading and distance calculations available',
+                    'sh/sun': 'Solar data: Sunrise/sunset times available',
+                    'sh/moon': 'Lunar data: Moonrise/moonset times available'
+                };
+                
+                const response = responses[command] || `Command executed: ${command}`;
+                response.split('\n').forEach(line => addTerminalLine(line));
+            }, 500);
+        }
+
+        function addTerminalLine(text) {
+            const terminal = document.getElementById('terminal-output');
+            const line = document.createElement('div');
+            line.textContent = text;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function showSettings() {
+            showSection('settings');
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type} fade-in`;
+            notification.innerHTML = `
+                <i class="fas fa-${getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+                <button class="notification-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                background: var(--bg-primary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius);
+                padding: var(--space-4);
+                box-shadow: var(--shadow-lg);
+                display: flex;
+                align-items: center;
+                gap: var(--space-3);
+                min-width: 300px;
+                max-width: 400px;
+            `;
+            
+            // Add border color based on type
+            if (type === 'success') notification.style.borderLeft = '4px solid var(--success)';
+            else if (type === 'error') notification.style.borderLeft = '4px solid var(--error)';
+            else if (type === 'warning') notification.style.borderLeft = '4px solid var(--warning)';
+            else notification.style.borderLeft = '4px solid var(--info)';
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+    </script>
+</body>
+</html>

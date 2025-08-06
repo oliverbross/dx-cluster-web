@@ -33,6 +33,7 @@ class ClustersAPI {
                 break;
             default:
                 http_response_code(405);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Method not allowed']);
                 break;
         }

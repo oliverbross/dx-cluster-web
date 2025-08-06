@@ -47,6 +47,7 @@ class WavelogProxy {
             if (!$input || !isset($input['endpoint']) || !isset($input['data'])) {
                 error_log("Wavelog proxy: Invalid input - " . print_r($input, true));
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Endpoint and data required', 'input' => $input]);
                 return;
             }
@@ -59,6 +60,7 @@ class WavelogProxy {
             if (!$wavelogSettings) {
                 error_log("Wavelog proxy: User settings not found or incomplete");
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Wavelog settings not configured', 'settings' => $wavelogSettings]);
                 return;
             }
@@ -67,6 +69,7 @@ class WavelogProxy {
             if (empty($wavelogSettings['url']) || empty($wavelogSettings['api_key'])) {
                 error_log("Wavelog proxy: Missing URL or API key in settings - " . print_r($wavelogSettings, true));
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Wavelog URL or API key not configured', 'settings' => $wavelogSettings]);
                 return;
             }
@@ -84,6 +87,7 @@ class WavelogProxy {
             
             if ($response === false) {
                 http_response_code(500);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Failed to connect to Wavelog API']);
                 return;
             }
@@ -93,6 +97,7 @@ class WavelogProxy {
         } catch (Exception $e) {
             error_log("Wavelog proxy error: " . $e->getMessage());
             http_response_code(500);
+            header('Content-Type: application/json');
             echo json_encode(['error' => 'Proxy request failed']);
         }
     }
@@ -178,8 +183,9 @@ try {
     $proxy = new WavelogProxy();
     $proxy->handleRequest();
 } catch (Exception $e) {
-    error_log("Wavelog proxy fatal error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['error' => 'Internal server error']);
-}
+                error_log("Wavelog proxy fatal error: " . $e->getMessage());
+                http_response_code(500);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Internal server error']);
+            }
 ?>

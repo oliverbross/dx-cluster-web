@@ -33,6 +33,7 @@ class PreferencesAPI {
                 break;
             default:
                 http_response_code(405);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Method not allowed']);
                 break;
         }
@@ -84,6 +85,7 @@ class PreferencesAPI {
             
             if (!$input) {
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Invalid JSON data']);
                 return;
             }

@@ -56,12 +56,14 @@ class AuthAPI {
                         break;
                     default:
                         http_response_code(400);
+                        header('Content-Type: application/json');
                         echo json_encode(['error' => 'Invalid action']);
                         break;
                 }
                 break;
             default:
                 http_response_code(405);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Method not allowed']);
                 break;
         }
@@ -76,6 +78,7 @@ class AuthAPI {
             
             if (!$input || !isset($input['callsign']) || !isset($input['password'])) {
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Callsign and password required']);
                 return;
             }
@@ -138,6 +141,7 @@ class AuthAPI {
             
             if (!$input || !isset($input['callsign']) || !isset($input['password']) || !isset($input['email'])) {
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Callsign, email, and password required']);
                 return;
             }
@@ -238,6 +242,7 @@ class AuthAPI {
             
             if (!$input || !isset($input['current_password']) || !isset($input['new_password'])) {
                 http_response_code(400);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'Current and new password required']);
                 return;
             }
@@ -339,6 +344,7 @@ class AuthAPI {
             
             if (!$user) {
                 http_response_code(404);
+                header('Content-Type: application/json');
                 echo json_encode(['error' => 'User not found']);
                 return;
             }

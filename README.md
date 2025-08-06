@@ -168,6 +168,10 @@ Customize spot colors in Settings:
 - `api/logbook_check_grid` - Check if grid is worked
 - `api/get_wp_stats` - Get QSO statistics
 
+### Wavelog Proxy
+To avoid CORS issues with Wavelog, the application uses a server-side proxy for all Wavelog API calls.
+This proxy handles authentication and securely communicates with Wavelog without exposing API keys to the client.
+
 ## 🌐 DX Clusters
 
 The application automatically fetches cluster lists from:

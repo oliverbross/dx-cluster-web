@@ -83,22 +83,19 @@ Object.assign(DXClusterApp.prototype, {
      * Fetch station information from Wavelog
      */
     async fetchStationInfo(url = null, apiKey = null) {
-        const wavelogUrl = url || this.preferences.wavelogUrl;
-        const wavelogApiKey = apiKey || this.preferences.wavelogApiKey;
+        // Use proxy to avoid CORS issues
+        const proxyUrl = 'api/wavelog-proxy.php';
         
-        if (!wavelogUrl || !wavelogApiKey) {
-            throw new Error('Wavelog URL and API key required');
-        }
-
-        const apiUrl = `${wavelogUrl}/api/station_info`;
-        
-        const response = await fetch(apiUrl, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                key: wavelogApiKey
+                endpoint: 'station_info',
+                data: {
+                    key: this.preferences.wavelogApiKey
+                }
             })
         });
 
@@ -142,18 +139,22 @@ Object.assign(DXClusterApp.prototype, {
      * Check if callsign is in logbook
      */
     async checkCallsignInLogbook(spot) {
-        const apiUrl = `${this.preferences.wavelogUrl}/api/logbook_check_callsign`;
+        // Use proxy to avoid CORS issues
+        const proxyUrl = 'api/wavelog-proxy.php';
         
-        const response = await fetch(apiUrl, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                key: this.preferences.wavelogApiKey,
-                logbook_public_slug: this.preferences.wavelogLogbookSlug,
-                band: spot.band,
-                callsign: spot.callsign
+                endpoint: 'logbook_check_callsign',
+                data: {
+                    key: this.preferences.wavelogApiKey,
+                    logbook_public_slug: this.preferences.wavelogLogbookSlug,
+                    band: spot.band,
+                    callsign: spot.callsign
+                }
             })
         });
 
@@ -179,18 +180,22 @@ Object.assign(DXClusterApp.prototype, {
     async checkGridInLogbook(spot) {
         if (!spot.grid) return null;
         
-        const apiUrl = `${this.preferences.wavelogUrl}/api/logbook_check_grid`;
+        // Use proxy to avoid CORS issues
+        const proxyUrl = 'api/wavelog-proxy.php';
         
-        const response = await fetch(apiUrl, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                key: this.preferences.wavelogApiKey,
-                logbook_public_slug: this.preferences.wavelogLogbookSlug,
-                band: spot.band,
-                grid: spot.grid
+                endpoint: 'logbook_check_grid',
+                data: {
+                    key: this.preferences.wavelogApiKey,
+                    logbook_public_slug: this.preferences.wavelogLogbookSlug,
+                    band: spot.band,
+                    grid: spot.grid
+                }
             })
         });
 
@@ -219,16 +224,20 @@ Object.assign(DXClusterApp.prototype, {
 
             const stationId = stationInfo[0].station_id;
             
-            const apiUrl = `${this.preferences.wavelogUrl}/api/get_wp_stats`;
+            // Use proxy to avoid CORS issues
+            const proxyUrl = 'api/wavelog-proxy.php';
             
-            const response = await fetch(apiUrl, {
+            const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    key: this.preferences.wavelogApiKey,
-                    station_id: stationId
+                    endpoint: 'get_wp_stats',
+                    data: {
+                        key: this.preferences.wavelogApiKey,
+                        station_id: stationId
+                    }
                 })
             });
 

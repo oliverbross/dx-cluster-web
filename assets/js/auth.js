@@ -18,6 +18,17 @@ class AuthManager {
     async checkSession() {
         try {
             const response = await fetch('api/auth.php?action=session');
+            
+            // Check if response is valid JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.warn('Session check returned non-JSON response');
+                this.isAuthenticated = false;
+                this.user = null;
+                this.updateUI();
+                return false;
+            }
+            
             const data = await response.json();
             
             if (data.authenticated) {

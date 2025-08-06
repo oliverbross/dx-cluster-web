@@ -110,6 +110,19 @@ The application has been tested for:
    - Rate limiting for API endpoints
    - Improved session management
 
+## ✅ Recent Fixes
+
+### Wavelog CORS Issues Resolved
+- Implemented server-side proxy for Wavelog API calls
+- Created `api/wavelog-proxy.php` to handle all Wavelog communication
+- Updated frontend to use proxy instead of direct API calls
+- This solution avoids CORS issues while keeping API keys secure
+
+### Authentication System Improvements
+- Enhanced error handling for session checks
+- Better handling of non-JSON responses from authentication API
+- Improved user feedback for authentication failures
+
 ## 📊 Current Limitations
 
 1. **WebSocket Server**

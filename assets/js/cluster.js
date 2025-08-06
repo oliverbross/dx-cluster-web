@@ -90,115 +90,15 @@ Object.assign(DXClusterApp.prototype, {
      */
     parseSpotData(rawData) {
         try {
-            // Handle different spot formats
-            // Common format: "DX de SPOTTER: FREQ CALLSIGN COMMENT TIME"
-            // Example: "DX de W1AW: 14205.0 JA1ABC CQ DX 1234Z"
-            
-            const spotRegex = /DX de\s+(\w+):\s+(\d+\.?\d*)\s+(\w+)\s+(.*?)\s+(\d{4}Z)/i;
-            const match = rawData.match(spotRegex);
-            
-            if (!match) {
-                console.warn('Could not parse spot:', rawData);
-                return null;
-            }
-
-            const [, spotter, frequency, callsign, comment, time] = match;
-            
-            // Determine band from frequency
-            const band = this.frequencyToBand(parseFloat(frequency));
-            
-            // Determine mode from comment or frequency
-            const mode = this.determineMode(comment, frequency);
-            
-            return {
-                callsign: callsign.toUpperCase(),
-                frequency: parseFloat(frequency),
-                spotter: spotter.toUpperCase(),
-                comment: comment.trim(),
-                time: time,
-                band: band,
-                mode: mode,
-                rawData: rawData
-            };
+            // Use enhanced spot parser
+            return DXSpotParser.parseSpotData(rawData);
         } catch (error) {
             console.error('Error parsing spot data:', error);
             return null;
         }
     },
 
-    /**
-     * Convert frequency to band
-     */
-    frequencyToBand(frequency) {
-        const bands = [
-            { min: 1800, max: 2000, band: '160m' },
-            { min: 3500, max: 4000, band: '80m' },
-            { min: 7000, max: 7300, band: '40m' },
-            { min: 10100, max: 10150, band: '30m' },
-            { min: 14000, max: 14350, band: '20m' },
-            { min: 18068, max: 18168, band: '17m' },
-            { min: 21000, max: 21450, band: '15m' },
-            { min: 24890, max: 24990, band: '12m' },
-            { min: 28000, max: 29700, band: '10m' },
-            { min: 50000, max: 54000, band: '6m' },
-            { min: 144000, max: 148000, band: '2m' },
-            { min: 420000, max: 450000, band: '70cm' }
-        ];
 
-        for (const bandInfo of bands) {
-            if (frequency >= bandInfo.min && frequency <= bandInfo.max) {
-                return bandInfo.band;
-            }
-        }
-
-        return 'Unknown';
-    },
-
-    /**
-     * Determine mode from comment and frequency
-     */
-    determineMode(comment, frequency) {
-        const commentUpper = comment.toUpperCase();
-        
-        // Check for explicit mode indicators
-        if (commentUpper.includes('CW') || commentUpper.includes('QRS')) return 'CW';
-        if (commentUpper.includes('SSB') || commentUpper.includes('PHONE')) return 'SSB';
-        if (commentUpper.includes('FT8')) return 'FT8';
-        if (commentUpper.includes('FT4')) return 'FT4';
-        if (commentUpper.includes('RTTY')) return 'RTTY';
-        if (commentUpper.includes('PSK31') || commentUpper.includes('PSK')) return 'PSK31';
-        if (commentUpper.includes('JT65')) return 'JT65';
-        if (commentUpper.includes('JT9')) return 'JT9';
-        if (commentUpper.includes('MFSK')) return 'MFSK';
-        if (commentUpper.includes('OLIVIA')) return 'OLIVIA';
-        if (commentUpper.includes('CONTESTIA')) return 'CONTESTIA';
-
-        // Guess based on frequency (rough approximation)
-        const freq = parseFloat(frequency);
-        
-        // CW portions of bands (simplified)
-        if ((freq >= 1800 && freq <= 1840) ||
-            (freq >= 3500 && freq <= 3600) ||
-            (freq >= 7000 && freq <= 7040) ||
-            (freq >= 10100 && freq <= 10140) ||
-            (freq >= 14000 && freq <= 14070) ||
-            (freq >= 18068 && freq <= 18100) ||
-            (freq >= 21000 && freq <= 21070) ||
-            (freq >= 24890 && freq <= 24920) ||
-            (freq >= 28000 && freq <= 28070)) {
-            return 'CW';
-        }
-
-        // Digital portions
-        if ((freq >= 14070 && freq <= 14095) ||
-            (freq >= 21070 && freq <= 21110) ||
-            (freq >= 28070 && freq <= 28120)) {
-            return 'DIGITAL';
-        }
-
-        // Default to SSB for voice portions
-        return 'SSB';
-    },
 
     /**
      * Determine spot status based on logbook data

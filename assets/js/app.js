@@ -212,7 +212,12 @@ class DXClusterApp {
         // Update user callsign display
         const userCallsignDisplay = document.getElementById('user-callsign');
         if (userCallsignDisplay) {
-            userCallsignDisplay.textContent = this.preferences.callsign || 'Guest';
+            // Use authenticated user callsign if available, otherwise from preferences
+            if (window.authManager && window.authManager.isAuthenticated && window.authManager.user) {
+                userCallsignDisplay.textContent = window.authManager.user.callsign;
+            } else {
+                userCallsignDisplay.textContent = this.preferences.callsign || 'Guest';
+            }
         }
     }
 

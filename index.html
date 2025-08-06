@@ -54,6 +54,10 @@
                             <i class="fas fa-user"></i>
                             <span id="user-callsign">Guest</span>
                         </button>
+                        <div class="dropdown-menu" id="user-dropdown" style="display: none;">
+                            <a href="#" class="dropdown-item" id="profile-link">Profile</a>
+                            <a href="#" class="dropdown-item" id="logout-link">Logout</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -410,8 +414,109 @@
     <!-- Scripts -->
     <script src="assets/js/mock-api.js"></script>
     <script src="assets/js/app.js"></script>
+    <script src="assets/js/spot-parser.js"></script>
     <script src="assets/js/cluster.js"></script>
     <script src="assets/js/wavelog.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-ui.js"></script>
     <script src="assets/js/ui.js"></script>
+    <!-- Login Modal -->
+    <div class="modal" id="login-modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-bold">Login to DX Cluster Web</h3>
+                </div>
+                <div class="card-body">
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label class="form-label">Callsign</label>
+                            <input type="text" class="form-input" id="login-callsign" placeholder="Your callsign" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-input" id="login-password" placeholder="Your password" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-block">Login</button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-4">
+                        <a href="#" id="show-register">Don't have an account? Register</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Register Modal -->
+    <div class="modal" id="register-modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-bold">Register for DX Cluster Web</h3>
+                </div>
+                <div class="card-body">
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label class="form-label">Callsign</label>
+                            <input type="text" class="form-input" id="register-callsign" placeholder="Your callsign" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" id="register-email" placeholder="Your email" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-input" id="register-password" placeholder="Choose a password" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-input" id="register-confirm-password" placeholder="Confirm your password" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-block">Register</button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-4">
+                        <a href="#" id="show-login">Already have an account? Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div class="modal" id="change-password-modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-bold">Change Password</h3>
+                </div>
+                <div class="card-body">
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-input" id="current-password" placeholder="Your current password" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-input" id="new-password" placeholder="Your new password" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-input" id="confirm-new-password" placeholder="Confirm your new password" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

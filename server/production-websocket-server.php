@@ -30,10 +30,23 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
         echo "🚀 DX Cluster WebSocket Server (Production) starting...\n";
     }
     
+    /**
+     * Handle new HTTP connection (for WebSocket upgrade)
+     */
     public function onOpen(ConnectionInterface $conn) {
         // Store the new connection
         $this->clients->attach($conn);
         echo "👤 New connection! ({$conn->resourceId})\n";
+        
+        // Check if this is a cluster connection request via query parameter
+        $query = $conn->httpRequest->getUri()->getQuery();
+        parse_str($query, $params);
+        
+        if (isset($params['cluster']) && is_numeric($params['cluster'])) {
+            echo "🔗 Cluster connection request detected: cluster {$params['cluster']}\n";
+            // Auto-connect to cluster if specified in query parameter
+            $this->connectToCluster($conn, $params['cluster']);
+        }
     }
     
     public function onMessage(ConnectionInterface $from, $msg) {
@@ -72,25 +85,6 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
                 'type' => 'error',
                 'data' => 'Error processing message: ' . $e->getMessage()
             ]));
-        }
-    }
-    
-    /**
-     * Handle new HTTP connection (for WebSocket upgrade)
-     */
-    public function onOpen(ConnectionInterface $conn) {
-        // Store the new connection
-        $this->clients->attach($conn);
-        echo "👤 New connection! ({$conn->resourceId})\n";
-        
-        // Check if this is a cluster connection request via query parameter
-        $query = $conn->httpRequest->getUri()->getQuery();
-        parse_str($query, $params);
-        
-        if (isset($params['cluster']) && is_numeric($params['cluster'])) {
-            echo "🔗 Cluster connection request detected: cluster {$params['cluster']}\n";
-            // Auto-connect to cluster if specified in query parameter
-            $this->connectToCluster($conn, $params['cluster']);
         }
     }
     

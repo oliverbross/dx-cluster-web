@@ -23,6 +23,10 @@ class WavelogProxy {
      * Handle API requests
      */
     public function handleRequest() {
+        error_log("Wavelog proxy: Request received - Method: " . $_SERVER['REQUEST_METHOD'] . ", URI: " . $_SERVER['REQUEST_URI']);
+        error_log("Wavelog proxy: Headers: " . print_r(getallheaders(), true));
+        error_log("Wavelog proxy: Raw input: " . file_get_contents('php://input'));
+        
         $method = $_SERVER['REQUEST_METHOD'];
         
         switch ($method) {
@@ -46,6 +50,7 @@ class WavelogProxy {
             
             if (!$input || !isset($input['endpoint']) || !isset($input['data'])) {
                 error_log("Wavelog proxy: Invalid input - " . print_r($input, true));
+                error_log("Wavelog proxy: Raw input - " . file_get_contents('php://input'));
                 http_response_code(400);
                 header('Content-Type: application/json');
                 echo json_encode(['error' => 'Endpoint and data required', 'input' => $input]);
@@ -109,20 +114,27 @@ class WavelogProxy {
         try {
             session_start();
             
+            error_log("Wavelog proxy: Session data - " . print_r($_SESSION, true));
+            
             if (!isset($_SESSION['user_id'])) {
+                error_log("Wavelog proxy: No user_id in session");
                 return null;
             }
             
             $userId = $_SESSION['user_id'];
+            error_log("Wavelog proxy: User ID - " . $userId);
             
             $sql = "SELECT wavelog_url as url, wavelog_api_key as api_key, wavelog_logbook_slug as logbook_slug
                     FROM users WHERE id = ?";
             $result = $this->db->query($sql, [$userId]);
             $user = $result->fetch();
             
+            error_log("Wavelog proxy: User data from DB - " . print_r($user, true));
+            
             // Allow returning partial settings for testing
             if (!$user) {
                 // Return default settings for testing
+                error_log("Wavelog proxy: No user data found, returning defaults");
                 return [
                     'url' => 'https://om0rx.wavelog.online',
                     'api_key' => 'test-key',
@@ -156,11 +168,15 @@ class WavelogProxy {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         
         // Execute request
+        error_log("Wavelog proxy: Making request to $url with data: " . json_encode($data));
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         
-        if (curl_error($ch)) {
-            error_log("cURL error: " . curl_error($ch));
+        error_log("Wavelog proxy: cURL response - HTTP Code: $httpCode, Response: " . substr($response, 0, 500));
+        
+        if ($curlError) {
+            error_log("cURL error: " . $curlError);
             curl_close($ch);
             return false;
         }

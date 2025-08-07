@@ -17,6 +17,8 @@ Object.assign(DXClusterApp.prototype, {
         const url = document.getElementById('wavelog-url').value;
         const apiKey = document.getElementById('wavelog-api-key').value;
         
+        console.log('Testing Wavelog connection with:', { url, apiKey });
+        
         if (!url || !apiKey) {
             this.showNotification('Please enter Wavelog URL and API key', 'warning');
             return;
@@ -27,6 +29,7 @@ Object.assign(DXClusterApp.prototype, {
             
             // Test connection by fetching station info
             const stationInfo = await this.fetchStationInfo(url, apiKey);
+            console.log('Wavelog station info response:', stationInfo);
             
             if (stationInfo && stationInfo.length > 0) {
                 this.updateWavelogStatus('connected');
@@ -40,6 +43,7 @@ Object.assign(DXClusterApp.prototype, {
             }
         } catch (error) {
             console.error('Wavelog connection test failed:', error);
+            console.error('Error details:', error.message, error.stack);
             this.updateWavelogStatus('error');
             this.showNotification('Wavelog connection failed: ' + error.message, 'error');
         }
@@ -94,7 +98,7 @@ Object.assign(DXClusterApp.prototype, {
             body: JSON.stringify({
                 endpoint: 'station_info',
                 data: {
-                    key: this.preferences.wavelogApiKey
+                    key: apiKey || this.preferences.wavelogApiKey
                 }
             })
         });

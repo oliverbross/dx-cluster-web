@@ -37,15 +37,20 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
         // Store the new connection
         $this->clients->attach($conn);
         echo "👤 New connection! ({$conn->resourceId})\n";
+        echo "👤 Connection details: " . print_r($conn, true) . "\n";
         
         // Check if this is a cluster connection request via query parameter
         $query = $conn->httpRequest->getUri()->getQuery();
+        echo "👤 Query string: $query\n";
         parse_str($query, $params);
+        echo "👤 Parsed params: " . print_r($params, true) . "\n";
         
         if (isset($params['cluster']) && is_numeric($params['cluster'])) {
             echo "🔗 Cluster connection request detected: cluster {$params['cluster']}\n";
             // Auto-connect to cluster if specified in query parameter
             $this->connectToCluster($conn, $params['cluster']);
+        } else {
+            echo "🔗 No cluster connection request detected\n";
         }
     }
     
@@ -105,12 +110,17 @@ class DXClusterWebSocketServer implements MessageComponentInterface {
      */
     private function connectToCluster(ConnectionInterface $conn, $clusterId) {
         try {
+            echo "🔗 Attempting to connect to cluster ID: {$clusterId}\n";
+            
             // Get cluster info from database
             $sql = "SELECT * FROM dx_clusters WHERE id = ? AND is_active = 1";
             $result = $this->db->query($sql, [$clusterId]);
             $cluster = $result->fetch();
             
+            echo "🔗 Cluster data: " . print_r($cluster, true) . "\n";
+            
             if (!$cluster) {
+                echo "❌ Cluster not found: {$clusterId}\n";
                 $conn->send(json_encode([
                     'type' => 'error',
                     'data' => 'Cluster not found'

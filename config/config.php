@@ -51,7 +51,8 @@ $default_preferences = [
 
 // Error Reporting
 if (APP_DEBUG) {
-    error_reporting(E_ALL);
+    // Suppress deprecated warnings but show other errors
+    error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
     ini_set('display_errors', 1);
 } else {
     error_reporting(0);

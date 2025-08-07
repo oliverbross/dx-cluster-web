@@ -19,7 +19,8 @@ define('APP_VERSION', '1.0.0');
 define('APP_DEBUG', true);
 
 // WebSocket Configuration
-define('WS_HOST', 'localhost');
+// Use 0.0.0.0 to bind to all interfaces for production
+define('WS_HOST', '0.0.0.0');
 define('WS_PORT', 8080);
 
 // External APIs

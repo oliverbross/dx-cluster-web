@@ -1,232 +1,182 @@
-# DX Cluster Web Application - Setup Guide
+# DX Cluster Web - Production Setup Guide
 
-## 🎯 Current Status
+## Server Requirements
 
-The DX Cluster Web Application has been successfully implemented with **core functionality working**. The application now includes:
+- PHP 7.4 or higher
+- MySQL 5.7 or higher
+- Composer (for WebSocket server dependencies)
+- Node.js (optional, for development server)
 
-### ✅ **Completed Features**
+## Installation Steps
 
-1. **Modern Responsive UI**
-   - Beautiful dark/light theme system
-   - Professional navigation with status indicators
-   - Responsive design for desktop and mobile
+### 1. Clone/Download Files
 
-2. **Mock API System** (Development Mode)
-   - Client-side API simulation for testing
-   - Mock DX cluster data and preferences
-   - Mock WebSocket implementation with simulated spots
+Place all files in your web server directory (e.g., `/var/www/html/dx-cluster/` or `/home/youruser/public_html/dx-cluster/`)
 
-3. **Core Application Structure**
-   - Dashboard with statistics and quick actions
-   - DX Spots table with filtering and sorting
-   - Terminal interface with command macros
-   - Settings panel for Wavelog integration and preferences
+### 2. Install PHP Dependencies
 
-4. **Complete Styling System**
-   - CSS custom properties for theming
-   - Component-based styling
-   - Responsive breakpoints
-   - Professional color schemes
-
-## 🚀 Quick Start (Development Mode)
-
-The application is currently configured to work in **development mode** without requiring a server setup:
-
-1. **Open the Application**
-   ```
-   Simply open: dx-cluster-web/index.html in your web browser
-   ```
-
-2. **Features Available**
-   - ✅ Browse all sections (Dashboard, DX Spots, Terminal, Settings)
-   - ✅ View mock DX cluster list
-   - ✅ Test UI interactions and navigation
-   - ✅ Configure preferences (saved to localStorage)
-   - ✅ See simulated DX spots when connecting to mock clusters
-
-## 📁 Project Structure
-
-```
-dx-cluster-web/
-├── index.html                 # Main application page
-├── assets/
-│   ├── css/
-│   │   └── styles.css         # Complete styling system
-│   └── js/
-│       ├── app.js             # Main application logic
-│       ├── cluster.js         # DX cluster management
-│       ├── wavelog.js         # Wavelog API integration
-│       ├── ui.js              # UI enhancements
-│       └── mock-api.js        # Development mock API
-├── api/                       # PHP API endpoints (for production)
-│   ├── clusters.php           # Cluster list management
-│   ├── preferences.php        # User preferences
-│   └── database.php           # Database utilities
-├── config/
-│   └── config.php             # Application configuration
-├── database/
-│   └── schema.sql             # Database schema
-├── server/                    # Development servers
-│   ├── dev-server.js          # Node.js dev server
-│   ├── dev-server.php         # PHP dev server
-│   ├── dev-server.py          # Python dev server
-│   └── websocket-server.php   # WebSocket server
-└── demo.html                  # Demo page
+```bash
+cd /path/to/dx-cluster
+composer install
 ```
 
-## 🔧 Production Setup (Optional)
+### 3. Database Setup
 
-For production deployment with real DX cluster connections:
-
-### Prerequisites
-- PHP 7.4+
-- MySQL 5.7+
-- Web server (Apache/Nginx)
-- Socket extension for PHP
-
-### Database Setup
 ```sql
+-- Create database
 CREATE DATABASE dx_cluster CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Create user (optional)
+CREATE USER 'dx_cluster'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON dx_cluster.* TO 'dx_cluster'@'localhost';
+FLUSH PRIVILEGES;
+
+-- Import schema
 mysql -u root -p dx_cluster < database/schema.sql
 ```
 
-### Configuration
-Edit `config/config.php`:
+### 4. Configuration
+
+Edit `config/config.php` and update database settings:
+
 ```php
+// Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'dx_cluster');
-define('DB_USER', 'your_username');
+define('DB_USER', 'dx_cluster');
 define('DB_PASS', 'your_password');
+
+// WebSocket Configuration (should already be set to 0.0.0.0)
+define('WS_HOST', '0.0.0.0');
+define('WS_PORT', 8080);
 ```
 
-### Start WebSocket Server
+### 5. Start Services
+
+#### Start WebSocket Server
+
 ```bash
-cd server/
-php websocket-server.php
+# Run in background with nohup
+nohup php server/production-websocket-server.php > websocket.log 2>&1 &
+
+# Or run in foreground to see output
+php server/production-websocket-server.php
 ```
 
-### Development Servers
-Choose one based on your environment:
+#### Start Web Server
 
-**Node.js:**
+You can use Apache/Nginx or PHP's built-in server:
+
 ```bash
-node server/dev-server.js
+# PHP built-in server (for testing)
+php -S 0.0.0.0:8000
+
+# Or configure Apache/Nginx virtual host
 ```
 
-**Python:**
-```bash
-python server/dev-server.py
+### 6. Configure Apache/Nginx (if using)
+
+#### Apache (.htaccess)
+
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ api/$1.php [L]
 ```
 
-**PHP:**
-```bash
-php -S localhost:8000 server/dev-server.php
+#### Nginx
+
+```nginx
+location /dx-cluster/api/ {
+    try_files $uri $uri.php;
+}
 ```
 
-## 🎨 Features Overview
+### 7. Access the Application
 
-### Dashboard
-- Real-time statistics display
-- Quick cluster connection
-- Wavelog integration status
-- Theme switching
+Open your web browser and navigate to: `http://your-server-ip:8000/`
 
-### DX Spots
-- Real-time spot display with color coding
-- Band and mode filtering
-- Search functionality
-- Sortable columns
+### 8. Configure Settings
 
-### Terminal
-- Direct cluster command interface
-- Pre-configured macro buttons
-- Command history
-- Real-time responses
+1. Click **Settings** in the navigation
+2. Enter your **Wavelog URL** and **API Key**
+3. Set your **callsign** and preferences
+4. Click **Save Settings**
 
-### Settings
-- Wavelog API configuration
-- User preferences
-- Color customization
-- Theme selection
+## Troubleshooting
 
-## 🔌 Wavelog Integration
+### WebSocket Connection Issues
 
-The application supports full Wavelog integration:
+1. Ensure WebSocket server is running:
+   ```bash
+   ps aux | grep websocket
+   ```
 
-1. **API Configuration**
-   - Enter your Wavelog URL
-   - Add your API key
-   - Set logbook slug
+2. Check firewall settings for port 8080:
+   ```bash
+   sudo ufw allow 8080
+   ```
 
-2. **Supported Features**
-   - Station information lookup
-   - Logbook status checking
-   - QSO statistics
-   - Spot color coding based on worked/confirmed status
+3. Verify PHP socket extension is installed:
+   ```bash
+   php -m | grep sockets
+   ```
 
-## 🎯 Next Steps for Full Production
+### Database Connection
 
-To complete the production setup:
+1. Check database credentials in `config/config.php`
+2. Ensure MySQL service is running:
+   ```bash
+   sudo systemctl status mysql
+   ```
+3. Verify database and tables exist
 
-1. **Real WebSocket Implementation**
-   - Connect to actual DX clusters
-   - Handle cluster protocols
-   - Implement reconnection logic
+### Wavelog Integration
 
-2. **Enhanced Wavelog Integration**
-   - Real-time logbook checking
-   - Direct QSO logging
-   - Advanced filtering based on needed status
+1. Test API key in Settings
+2. Check Wavelog URL format (include http/https)
+3. Verify API endpoints are accessible
 
-3. **User Authentication**
-   - User registration/login
-   - Personal preferences storage
-   - Session management
+## Production Deployment
 
-4. **Advanced Features**
-   - Audio alarms
-   - SOTA/POTA recognition
-   - Contest integration
-   - Mobile app support
+For production deployment, consider:
 
-## 🐛 Troubleshooting
+1. **Use a process manager** like Supervisor to keep the WebSocket server running:
+   ```ini
+   [program:dx-websocket]
+   command=php /path/to/dx-cluster/server/production-websocket-server.php
+   directory=/path/to/dx-cluster
+   user=www-data
+   autostart=true
+   autorestart=true
+   redirect_stderr=true
+   stdout_logfile=/var/log/supervisor/dx-websocket.log
+   ```
 
-### Common Issues
+2. **Configure reverse proxy** with Apache/Nginx for WebSocket support:
+   ```nginx
+   location / {
+       proxy_pass http://localhost:8000;
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header Host $host;
+   }
+   ```
 
-1. **CORS Errors (Development)**
-   - The mock API automatically handles this
-   - For production, ensure proper CORS headers
+3. **Set up SSL** with Let's Encrypt for secure connections
 
-2. **Database Connection**
-   - Check credentials in config.php
-   - Ensure MySQL is running
-   - Verify database exists
+4. **Monitor logs** regularly:
+   - WebSocket server logs
+   - Web server logs
+   - PHP error logs
 
-3. **WebSocket Issues**
-   - Ensure WebSocket server is running
-   - Check firewall settings
-   - Verify PHP socket extension
+## Security Considerations
 
-## 📱 Browser Compatibility
-
-- ✅ Chrome 80+
-- ✅ Firefox 75+
-- ✅ Safari 13+
-- ✅ Edge 80+
-
-## 🔒 Security Notes
-
-- Input sanitization implemented
-- Prepared statements for database queries
-- CORS headers configured
-- Session management for preferences
-
-## 📞 Support
-
-The application is fully functional in development mode. For production deployment assistance or feature requests, refer to the comprehensive codebase and documentation provided.
-
----
-
-**73 de DX Cluster Web Team** 📡
-
-*Last updated: 2025-08-01*
+- Use strong database passwords
+- Restrict database user privileges
+- Use HTTPS for production deployments
+- Regularly update dependencies
+- Implement proper input sanitization (already included)
+- Use prepared statements for database queries (already included)

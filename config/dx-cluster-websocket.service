@@ -6,12 +6,22 @@ After=network.target
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/path/to/dx-cluster-web
-ExecStart=/usr/bin/php /path/to/dx-cluster-web/server/production-websocket-server.php
+WorkingDirectory=/home/om0rx/public_html/dx-cluster
+ExecStart=/usr/bin/php /home/om0rx/public_html/dx-cluster/server/production-websocket-server.php
 Restart=always
-RestartSec=3
+RestartSec=10
+
+# Environment variables
+Environment=PHP_ENV=production
+
+# Logging
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=dx-cluster-websocket
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

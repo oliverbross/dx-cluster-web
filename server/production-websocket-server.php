@@ -425,18 +425,50 @@ if (php_sapi_name() === 'cli') {
     
     echo "📡 Starting WebSocket server on {$host}:{$port}\n";
     
+    // Check if SSL certificates are available
+    $sslCert = '/etc/dx-cluster/ssl/server.crt';
+    $sslKey = '/etc/dx-cluster/ssl/server.key';
+    $useSSL = file_exists($sslCert) && file_exists($sslKey);
+    
+    if ($useSSL) {
+        echo "🔐 SSL certificates found, enabling secure WebSocket (wss://)\n";
+    } else {
+        echo "⚠️  No SSL certificates found, using insecure WebSocket (ws://)\n";
+        echo "   Run setup-ssl.sh to generate self-signed certificates for testing\n";
+    }
+    
     // Create the WebSocket server
     $websocketServer = new DXClusterWebSocketServer();
     
-    $server = IoServer::factory(
-        new HttpServer(
-            new WsServer(
-                $websocketServer
-            )
-        ),
-        $port,
-        $host
-    );
+    if ($useSSL) {
+        // Create secure WebSocket server
+        $server = IoServer::factory(
+            new HttpServer(
+                new WsServer(
+                    $websocketServer
+                )
+            ),
+            $port,
+            $host,
+            [
+                'local_cert' => $sslCert,
+                'local_pk' => $sslKey,
+                'allow_self_signed' => true,
+                'verify_peer' => false
+            ]
+        );
+    } else {
+        // Create insecure WebSocket server
+        $server = IoServer::factory(
+            new HttpServer(
+                new WsServer(
+                    $websocketServer
+                )
+            ),
+            $port,
+            $host
+        );
+    }
     
     // Add periodic timer to keep the event loop alive and process cluster connections
     $server->loop->addPeriodicTimer(0.1, function () use ($websocketServer) {

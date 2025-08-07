@@ -336,9 +336,8 @@ class DXClusterApp {
             this.updateConnectionStatus('connecting');
             
             // Initialize WebSocket connection
-            // Use server IP from config or default to current host
-            // For production, we'll use 'ws' instead of 'wss' since the server isn't configured for SSL
-            const protocol = 'ws'; // Always use ws for now since server doesn't support SSL
+            // Use secure WebSocket if page is loaded over HTTPS, otherwise use insecure
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const wsHost = window.location.hostname;
             const wsPort = 8080;
             const wsUrl = `${protocol}://${wsHost}:${wsPort}/?cluster=${clusterId}`;

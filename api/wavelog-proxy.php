@@ -139,23 +139,13 @@ class WavelogProxy {
             
             // Allow returning partial settings for testing
             if (!$user) {
-                // Check if we have the data in the POST request for testing
-                error_log("Wavelog proxy: No user data found in DB, checking POST data");
-                // Use the data from the POST request directly if available
-                if (isset($data['key']) && !empty($data['key'])) {
-                    return [
-                        'url' => 'https://om0rx.wavelog.online/index.php', // Default Wavelog URL
-                        'api_key' => $data['key'],
-                        'logbook_slug' => $data['logbook_public_slug'] ?? 'default'
-                    ];
-                }
-                
-                // Return default settings for testing
-                error_log("Wavelog proxy: No user data found, returning defaults");
+                error_log("Wavelog proxy: No user data found in DB");
+                // Return default settings for testing - use the data from the outer scope
+                error_log("Wavelog proxy: Returning defaults with API key from input data");
                 return [
                     'url' => 'https://om0rx.wavelog.online/index.php',
-                    'api_key' => 'wl489abaab6e4f4', // Your actual API key from the logs
-                    'logbook_slug' => 'default-logbook'
+                    'api_key' => $data['key'] ?? 'wl489abaab6e4f4', // Use API key from input data or default
+                    'logbook_slug' => $data['logbook_public_slug'] ?? 'default-logbook'
                 ];
             }
             

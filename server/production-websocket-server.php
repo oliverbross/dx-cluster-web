@@ -425,17 +425,28 @@ if (php_sapi_name() === 'cli') {
     
     echo "📡 Starting WebSocket server on {$host}:{$port}\n";
     
+    // Create the WebSocket server
+    $websocketServer = new DXClusterWebSocketServer();
+    
     $server = IoServer::factory(
         new HttpServer(
             new WsServer(
-                new DXClusterWebSocketServer()
+                $websocketServer
             )
         ),
         $port,
         $host
     );
     
+    // Add periodic timer to keep the event loop alive and process cluster connections
+    $server->loop->addPeriodicTimer(0.1, function () use ($websocketServer) {
+        // This keeps the React event loop processing
+        // The loop will handle all async operations for cluster connections
+    });
+    
+    echo "✅ WebSocket server initialized, starting event loop...\n";
     $server->run();
+    echo "👋 WebSocket server stopped\n";
 } else {
     // For web requests, check if it's a cluster connection request
     if (isset($_GET['cluster']) && is_numeric($_GET['cluster'])) {

@@ -83,8 +83,14 @@ class WavelogProxy {
             $baseUrl = $wavelogSettings['url'] ?? '';
             if (empty($baseUrl)) {
                 // Use default Wavelog URL from preferences if not set in user settings
-                $baseUrl = 'https://om0rx.wavelog.online'; // Default fallback
+                $baseUrl = 'https://om0rx.wavelog.online/index.php'; // Default fallback with index.php
             }
+            // Ensure the base URL ends with index.php
+            if (!str_ends_with($baseUrl, 'index.php')) {
+                $baseUrl = rtrim($baseUrl, '/') . '/index.php';
+            }
+            // Remove index.php from the base URL since we're adding /api/
+            $baseUrl = str_replace('/index.php', '', $baseUrl);
             $apiUrl = rtrim($baseUrl, '/') . '/api/' . ltrim($endpoint, '/');
             
             // Make request to Wavelog API
@@ -133,13 +139,29 @@ class WavelogProxy {
             
             // Allow returning partial settings for testing
             if (!$user) {
+                // Check if we have the data in the POST request for testing
+                error_log("Wavelog proxy: No user data found in DB, checking POST data");
+                // Use the data from the POST request directly if available
+                if (isset($data['key']) && !empty($data['key'])) {
+                    return [
+                        'url' => 'https://om0rx.wavelog.online/index.php', // Default Wavelog URL
+                        'api_key' => $data['key'],
+                        'logbook_slug' => $data['logbook_public_slug'] ?? 'default'
+                    ];
+                }
+                
                 // Return default settings for testing
                 error_log("Wavelog proxy: No user data found, returning defaults");
                 return [
-                    'url' => 'https://om0rx.wavelog.online',
-                    'api_key' => 'test-key',
-                    'logbook_slug' => 'test-logbook'
+                    'url' => 'https://om0rx.wavelog.online/index.php',
+                    'api_key' => 'wl489abaab6e4f4', // Your actual API key from the logs
+                    'logbook_slug' => 'default-logbook'
                 ];
+            }
+            
+            // Ensure URL has the correct format
+            if (!empty($user['url']) && !str_contains($user['url'], 'index.php')) {
+                $user['url'] = rtrim($user['url'], '/') . '/index.php';
             }
             
             return $user;

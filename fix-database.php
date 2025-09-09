@@ -1,4 +1,143 @@
-<!DOCTYPE html>
+<?php
+// MUST be at the very top - no HTML before this!
+
+// Load environment variables function
+function loadEnv() {
+    $envFile = __DIR__ . '/.env';
+    if (!file_exists($envFile)) {
+        return false;
+    }
+    
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        
+        // Skip comments and empty lines
+        if (empty($line) || strpos($line, '#') === 0) {
+            continue;
+        }
+        
+        // Split on first = only
+        if (strpos($line, '=') === false) {
+            continue;
+        }
+        
+        list($name, $value) = explode('=', $line, 2);
+        $name = trim($name);
+        $value = trim($value);
+        
+        // Remove quotes if present
+        if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') || 
+            (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
+            $value = substr($value, 1, -1);
+        }
+        
+        // Set environment variable
+        putenv(sprintf('%s=%s', $name, $value));
+        $_ENV[$name] = $value;
+        $_SERVER[$name] = $value;
+    }
+    return true;
+}
+
+// Get database connection function
+function getDatabaseConnection() {
+    try {
+        $host = getenv('DB_HOST') ?: 'localhost';
+        
+        // Support both naming conventions
+        $dbname = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: 'dx_cluster_web';
+        $username = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: 'root';
+        $password = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
+        $port = getenv('DB_PORT') ?: '3306';
+        $charset = getenv('DB_CHARSET') ?: 'utf8mb4';
+        
+        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
+        $pdo = new PDO($dsn, $username, $password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        
+        return $pdo;
+    } catch (Exception $e) {
+        throw new Exception("Database connection failed: " . $e->getMessage());
+    }
+}
+
+// Initialize
+$fixApplied = false;
+$fixResult = '';
+$clustersInserted = false;
+$insertResult = '';
+
+// Load environment
+loadEnv();
+
+// Handle form submissions BEFORE any HTML output
+if ($_POST['apply_fix'] ?? false) {
+    try {
+        $pdo = getDatabaseConnection();
+        $sql = "UPDATE dx_clusters 
+                SET 
+                    name = 'OM0RX Cluster',
+                    host = 'cluster.om0rx.com',
+                    description = 'OM0RX Personal DX Cluster'
+                WHERE id = 5";
+        
+        $affected = $pdo->exec($sql);
+        $fixApplied = true;
+        
+        // Get updated data
+        $updated = $pdo->query("SELECT * FROM dx_clusters WHERE id = 5")->fetch();
+        
+        $fixResult = "✅ Fix applied successfully! $affected row(s) updated.<br>";
+        if ($updated) {
+            $fixResult .= "<strong>Updated Cluster ID 5:</strong><br>";
+            $fixResult .= "Name: {$updated['name']}<br>";
+            $fixResult .= "Host: {$updated['host']}<br>";
+            $fixResult .= "Port: {$updated['port']}<br>";
+            $fixResult .= "Description: {$updated['description']}<br>";
+        }
+        
+    } catch (Exception $e) {
+        $fixResult = "❌ Error applying fix: " . htmlspecialchars($e->getMessage());
+    }
+}
+
+if ($_POST['insert_clusters'] ?? false) {
+    try {
+        $pdo = getDatabaseConnection();
+        $clusters = [
+            ['DX Summit', 'dxc.dxsummit.fi', 8000, 'Popular DX cluster with web interface'],
+            ['OH2AQ', 'oh2aq.kolumbus.fi', 41112, 'Finnish DX cluster'],
+            ['VE7CC', 've7cc.net', 23, 'Canadian DX cluster'],
+            ['W3LPL', 'w3lpl.net', 7300, 'US East Coast DX cluster'],
+            ['OM0RX Cluster', 'cluster.om0rx.com', 7300, 'OM0RX Personal DX Cluster']
+        ];
+        
+        $stmt = $pdo->prepare("INSERT INTO dx_clusters (name, host, port, description) VALUES (?, ?, ?, ?)");
+        $inserted = 0;
+        
+        $insertResult = "";
+        foreach ($clusters as $cluster) {
+            try {
+                $stmt->execute($cluster);
+                $inserted++;
+                $insertResult .= "✅ Inserted: {$cluster[0]} ({$cluster[1]}:{$cluster[2]})<br>";
+            } catch (Exception $e) {
+                $insertResult .= "⚠️ Skipped {$cluster[0]}: " . $e->getMessage() . "<br>";
+            }
+        }
+        
+        $clustersInserted = true;
+        $insertResult .= "🎉 Inserted $inserted clusters successfully!";
+        
+    } catch (Exception $e) {
+        $insertResult = "❌ Error inserting clusters: " . htmlspecialchars($e->getMessage());
+    }
+}
+
+?><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,53 +167,66 @@
         <h1>🔧 DX Cluster Database Fix Tool</h1>
         <p><strong>Problem:</strong> Cluster ID 5 shows as "K3LR" but should be "OM0RX Cluster"</p>
         
+        <?php if ($fixApplied): ?>
+        <div class="status success">
+            <h3>🔧 Fix Applied Successfully!</h3>
+            <?php echo $fixResult; ?>
+            <div class="success"><h4>🎉 SUCCESS! The database has been fixed!</h4>
+            <p>Now when you select 'OM0RX Cluster' (ID 5), it will correctly connect to <strong>cluster.om0rx.com:7300</strong></p></div>
+            <button onclick="location.reload()" class="btn">🔄 Refresh Page to See Changes</button>
+        </div>
+        <?php endif; ?>
+        
+        <?php if ($clustersInserted): ?>
+        <div class="status success">
+            <h3>➕ Clusters Inserted Successfully!</h3>
+            <?php echo $insertResult; ?>
+            <button onclick="location.reload()" class="btn">🔄 Refresh Page</button>
+        </div>
+        <?php endif; ?>
+        
 <?php
-
 
 // Step 1: Load .env file
 echo "<div class='status info'><h3>📁 Step 1: Loading Environment Variables</h3>";
-if (loadEnv()) {
-    echo "✅ .env file loaded successfully<br>";
-    
-    // Support both naming conventions
-    $dbname = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: 'dx_cluster_web';
-    $username = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: 'root';
-    $password = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
-    $host = getenv('DB_HOST') ?: 'localhost';
-    $port = getenv('DB_PORT') ?: '3306';
-    
-    echo "📊 Database: $dbname<br>";
-    echo "🏠 Host: $host<br>";
-    echo "🔌 Port: $port<br>";
-    echo "👤 User: $username<br>";
-    
-    // Show password status (masked for security)
-    if ($password !== '') {
-        echo "🔑 Password: " . str_repeat('*', strlen($password)) . " (loaded from " . (getenv('DB_PASSWORD') ? 'DB_PASSWORD' : 'DB_PASS') . ")<br>";
-    } else {
-        echo "<div class='error'>❌ Password is empty or not found! (checked DB_PASSWORD and DB_PASS)</div>";
-    }
-    
-    // Debug: Show raw .env content (first 10 lines only)
-    echo "<details><summary>🔍 Debug: .env file content (click to expand)</summary>";
-    echo "<pre style='font-size: 12px; max-height: 200px; overflow-y: auto;'>";
-    $envContent = file_get_contents(__DIR__ . '/.env');
-    $lines = explode("\n", $envContent);
-    foreach (array_slice($lines, 0, 15) as $i => $line) {
-        // Mask password line for security
-        if (strpos($line, 'DB_PASSWORD') !== false) {
-            $line = 'DB_PASSWORD=***MASKED***';
-        }
-        echo ($i + 1) . ": " . htmlspecialchars($line) . "\n";
-    }
-    if (count($lines) > 15) {
-        echo "... (" . (count($lines) - 15) . " more lines)\n";
-    }
-    echo "</pre></details>";
-    
+
+// Support both naming conventions
+$dbname = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: 'dx_cluster_web';
+$username = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: 'root';
+$password = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
+$host = getenv('DB_HOST') ?: 'localhost';
+$port = getenv('DB_PORT') ?: '3306';
+
+echo "✅ .env file loaded successfully<br>";
+echo "📊 Database: $dbname<br>";
+echo "🏠 Host: $host<br>";
+echo "🔌 Port: $port<br>";
+echo "👤 User: $username<br>";
+
+// Show password status (masked for security)
+if ($password !== '') {
+    echo "🔑 Password: " . str_repeat('*', strlen($password)) . " (loaded from " . (getenv('DB_PASSWORD') ? 'DB_PASSWORD' : 'DB_PASS') . ")<br>";
 } else {
-    echo "<div class='error'>❌ .env file not found at: " . __DIR__ . "/.env</div>";
+    echo "<div class='error'>❌ Password is empty or not found! (checked DB_PASSWORD and DB_PASS)</div>";
 }
+
+// Debug: Show raw .env content (first 10 lines only)
+echo "<details><summary>🔍 Debug: .env file content (click to expand)</summary>";
+echo "<pre style='font-size: 12px; max-height: 200px; overflow-y: auto;'>";
+$envContent = file_get_contents(__DIR__ . '/.env');
+$lines = explode("\n", $envContent);
+foreach (array_slice($lines, 0, 15) as $i => $line) {
+    // Mask password line for security
+    if (strpos($line, 'DB_PASSWORD') !== false || strpos($line, 'DB_PASS') !== false) {
+        $line = preg_replace('/=.*/', '=***MASKED***', $line);
+    }
+    echo ($i + 1) . ": " . htmlspecialchars($line) . "\n";
+}
+if (count($lines) > 15) {
+    echo "... (" . (count($lines) - 15) . " more lines)\n";
+}
+echo "</pre></details>";
+
 echo "</div>";
 
 // Step 2: Test database connection
@@ -160,7 +312,7 @@ try {
                 echo "<div class='status warning'>";
                 echo "<h4>🔧 Ready to Apply Fix</h4>";
                 echo "<form method='post'>";
-                echo "<button type='submit' name='apply_fix' class='btn'>🚀 Fix Cluster ID 5 Data</button>";
+                echo "<button type='submit' name='apply_fix' value='1' class='btn'>🚀 Fix Cluster ID 5 Data</button>";
                 echo "</form>";
                 echo "</div>";
             } else {
@@ -170,7 +322,7 @@ try {
             echo "<div class='warning'>⚠️ Cluster ID 5 not found. Will insert it.</div>";
             echo "<div class='status warning'>";
             echo "<form method='post'>";
-            echo "<button type='submit' name='insert_clusters' class='btn'>➕ Insert Missing Clusters</button>";
+            echo "<button type='submit' name='insert_clusters' value='1' class='btn'>➕ Insert Missing Clusters</button>";
             echo "</form>";
             echo "</div>";
         }
@@ -178,79 +330,13 @@ try {
     } else {
         echo "<div class='warning'>⚠️ No clusters found in database. Will insert default clusters.</div>";
         echo "<form method='post'>";
-        echo "<button type='submit' name='insert_clusters' class='btn'>➕ Insert Default Clusters</button>";
+        echo "<button type='submit' name='insert_clusters' value='1' class='btn'>➕ Insert Default Clusters</button>";
         echo "</form>";
     }
 } catch (Exception $e) {
     echo "<div class='error'>❌ Error reading clusters: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
 echo "</div>";
-
-// Handle form submissions
-if ($_POST['apply_fix'] ?? false) {
-    echo "<div class='status success'><h3>🔧 Applying Fix...</h3>";
-    try {
-        $sql = "UPDATE dx_clusters 
-                SET 
-                    name = 'OM0RX Cluster',
-                    host = 'cluster.om0rx.com',
-                    description = 'OM0RX Personal DX Cluster'
-                WHERE id = 5";
-        
-        $affected = $pdo->exec($sql);
-        echo "✅ Fix applied successfully! $affected row(s) updated.<br>";
-        
-        // Show updated data
-        $updated = $pdo->query("SELECT * FROM dx_clusters WHERE id = 5")->fetch();
-        if ($updated) {
-            echo "<strong>Updated Cluster ID 5:</strong><br>";
-            echo "Name: {$updated['name']}<br>";
-            echo "Host: {$updated['host']}<br>";
-            echo "Port: {$updated['port']}<br>";
-            echo "Description: {$updated['description']}<br>";
-        }
-        
-        echo "<div class='success'><h4>🎉 SUCCESS! The database has been fixed!</h4>";
-        echo "<p>Now when you select 'OM0RX Cluster' (ID 5), it will correctly connect to <strong>cluster.om0rx.com:7300</strong></p></div>";
-        
-    } catch (Exception $e) {
-        echo "<div class='error'>❌ Error applying fix: " . htmlspecialchars($e->getMessage()) . "</div>";
-    }
-    echo "</div>";
-}
-
-if ($_POST['insert_clusters'] ?? false) {
-    echo "<div class='status success'><h3>➕ Inserting Default Clusters...</h3>";
-    try {
-        $clusters = [
-            ['DX Summit', 'dxc.dxsummit.fi', 8000, 'Popular DX cluster with web interface'],
-            ['OH2AQ', 'oh2aq.kolumbus.fi', 41112, 'Finnish DX cluster'],
-            ['VE7CC', 've7cc.net', 23, 'Canadian DX cluster'],
-            ['W3LPL', 'w3lpl.net', 7300, 'US East Coast DX cluster'],
-            ['OM0RX Cluster', 'cluster.om0rx.com', 7300, 'OM0RX Personal DX Cluster']
-        ];
-        
-        $stmt = $pdo->prepare("INSERT INTO dx_clusters (name, host, port, description) VALUES (?, ?, ?, ?)");
-        $inserted = 0;
-        
-        foreach ($clusters as $cluster) {
-            try {
-                $stmt->execute($cluster);
-                $inserted++;
-                echo "✅ Inserted: {$cluster[0]} ({$cluster[1]}:{$cluster[2]})<br>";
-            } catch (Exception $e) {
-                echo "⚠️ Skipped {$cluster[0]}: " . $e->getMessage() . "<br>";
-            }
-        }
-        
-        echo "<div class='success'>🎉 Inserted $inserted clusters successfully!</div>";
-        echo "<button onclick='location.reload()' class='btn'>🔄 Refresh Page</button>";
-        
-    } catch (Exception $e) {
-        echo "<div class='error'>❌ Error inserting clusters: " . htmlspecialchars($e->getMessage()) . "</div>";
-    }
-    echo "</div>";
-}
 
 // Step 5: Test the fix
 echo "<div class='status info'><h3>🧪 Step 5: Test Connection</h3>";

@@ -64,14 +64,20 @@ class ClustersAPI {
                 $clusters = $result->fetchAll();
                 
                 if (!empty($clusters)) {
-                    echo json_encode($clusters);
+                    echo json_encode([
+                        'success' => true,
+                        'clusters' => $clusters
+                    ]);
                     return;
                 }
             }
             
             // Fallback to hardcoded clusters if database is not available
             $clusters = $this->getDefaultClusters();
-            echo json_encode($clusters);
+            echo json_encode([
+                'success' => true,
+                'clusters' => $clusters
+            ]);
             
         } catch (Exception $e) {
             error_log("Clusters API error: " . $e->getMessage());

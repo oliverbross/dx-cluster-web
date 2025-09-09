@@ -29,68 +29,7 @@
         <p><strong>Problem:</strong> Cluster ID 5 shows as "K3LR" but should be "OM0RX Cluster"</p>
         
 <?php
-// Load environment variables
-function loadEnv() {
-    $envFile = __DIR__ . '/.env';
-    if (!file_exists($envFile)) {
-        return false;
-    }
-    
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        
-        // Skip comments and empty lines
-        if (empty($line) || strpos($line, '#') === 0) {
-            continue;
-        }
-        
-        // Split on first = only
-        if (strpos($line, '=') === false) {
-            continue;
-        }
-        
-        list($name, $value) = explode('=', $line, 2);
-        $name = trim($name);
-        $value = trim($value);
-        
-        // Remove quotes if present
-        if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') || 
-            (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
-            $value = substr($value, 1, -1);
-        }
-        
-        // Set environment variable
-        putenv(sprintf('%s=%s', $name, $value));
-        $_ENV[$name] = $value;
-        $_SERVER[$name] = $value;
-    }
-    return true;
-}
 
-// Get database connection
-function getDatabaseConnection() {
-    try {
-        $host = getenv('DB_HOST') ?: 'localhost';
-        
-        // Support both naming conventions
-        $dbname = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: 'dx_cluster_web';
-        $username = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: 'root';
-        $password = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
-        $port = getenv('DB_PORT') ?: '3306';
-        $charset = getenv('DB_CHARSET') ?: 'utf8mb4';
-        
-        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
-        $pdo = new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        ]);
-        
-        return $pdo;
-    } catch (Exception $e) {
-        throw new Exception("Database connection failed: " . $e->getMessage());
-    }
-}
 
 // Step 1: Load .env file
 echo "<div class='status info'><h3>📁 Step 1: Loading Environment Variables</h3>";

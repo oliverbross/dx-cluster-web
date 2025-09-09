@@ -8,10 +8,10 @@ const WebSocket = require("ws");
 const PORT = process.env.WS_PORT || 8080;
 const SSL_PORT = process.env.WSS_PORT || 8443;
 
-// SSL Configuration - using your Virtualmin certificates
+// SSL Configuration - using your Virtualmin certificates with full chain
 const SSL_CONFIG = {
   key: process.env.SSL_KEY || '/etc/ssl/virtualmin/175207398659177/ssl.key',
-  cert: process.env.SSL_CERT || '/etc/ssl/virtualmin/175207398659177/ssl.cert'
+  cert: process.env.SSL_CERT || '/etc/ssl/virtualmin/175207398659177/ssl.combined'
 };
 
 function stripTelnet(buf) {

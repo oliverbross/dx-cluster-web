@@ -15,6 +15,7 @@
     
     <!-- Styles -->
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/no-websocket-additions.css?v=1.2">
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
@@ -234,6 +235,17 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Live spots container for polling updates -->
+                    <div class="px-4 pb-4">
+                        <h3 class="text-sm font-semibold mb-3 text-gray-400">🔴 LIVE SPOTS</h3>
+                        <div id="spots-container" class="space-y-2 max-h-96 overflow-y-auto">
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fas fa-satellite text-2xl mb-2"></i>
+                                <div>Connect to a DX cluster to see live spots</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -416,8 +428,8 @@
         </section>
     </main>
 
-    <!-- Scripts -->
-    <script src="assets/js/app.js?v=1.1"></script>
+    <!-- Scripts - No WebSocket Version -->
+    <script src="assets/js/app-no-websocket.js?v=1.2"></script>
     <script src="assets/js/spot-parser.js?v=1.1"></script>
     <script src="assets/js/cluster.js?v=1.1"></script>
     <script src="assets/js/wavelog.js?v=1.1"></script>

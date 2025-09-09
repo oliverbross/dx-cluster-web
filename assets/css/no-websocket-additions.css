@@ -1,0 +1,187 @@
+/* Additional styles for No-WebSocket version */
+
+/* Simple notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 9999;
+    min-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.notification.info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Connection status indicator */
+.status {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-block;
+    min-width: 120px;
+    text-align: center;
+}
+
+.status.connected {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status.connecting {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    animation: pulse 1.5s infinite;
+}
+
+.status.disconnected {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+    border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* DX Spots container */
+.dx-spot {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 100px 80px 100px 80px 1fr;
+    gap: 12px;
+    align-items: center;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    animation: fadeIn 0.5s ease;
+}
+
+.spot-callsign {
+    font-weight: bold;
+    color: #fbbf24;
+}
+
+.spot-frequency {
+    color: #60a5fa;
+    font-weight: 500;
+}
+
+.spot-spotter {
+    color: #a78bfa;
+    font-size: 12px;
+}
+
+.spot-time {
+    color: #9ca3af;
+    font-size: 11px;
+}
+
+.spot-comment {
+    color: #d1d5db;
+    font-style: italic;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Terminal improvements for polling */
+.terminal-line {
+    margin-bottom: 2px;
+    line-height: 1.4;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+}
+
+.terminal-line:last-child {
+    margin-bottom: 0;
+}
+
+/* Polling indicator */
+.polling-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.polling-indicator.inactive {
+    background: #6b7280;
+    animation: none;
+}
+
+/* Responsive grid for mobile */
+@media (max-width: 768px) {
+    .dx-spot {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        text-align: left;
+    }
+    
+    .spot-callsign::before {
+        content: 'Call: ';
+        color: #9ca3af;
+        font-weight: normal;
+    }
+    
+    .spot-frequency::before {
+        content: 'Freq: ';
+        color: #9ca3af;
+        font-weight: normal;
+    }
+}

@@ -72,12 +72,15 @@ function loadEnv() {
 function getDatabaseConnection() {
     try {
         $host = getenv('DB_HOST') ?: 'localhost';
-        $dbname = getenv('DB_DATABASE') ?: 'dx_cluster_web';
-        $username = getenv('DB_USERNAME') ?: 'root';
-        $password = getenv('DB_PASSWORD') ?: '';
-        $port = getenv('DB_PORT') ?: '3306';
         
-        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
+        // Support both naming conventions
+        $dbname = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: 'dx_cluster_web';
+        $username = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: 'root';
+        $password = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
+        $port = getenv('DB_PORT') ?: '3306';
+        $charset = getenv('DB_CHARSET') ?: 'utf8mb4';
+        
+        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
         $pdo = new PDO($dsn, $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -93,17 +96,24 @@ function getDatabaseConnection() {
 echo "<div class='status info'><h3>📁 Step 1: Loading Environment Variables</h3>";
 if (loadEnv()) {
     echo "✅ .env file loaded successfully<br>";
-    echo "📊 Database: " . (getenv('DB_DATABASE') ?: 'dx_cluster_web') . "<br>";
-    echo "🏠 Host: " . (getenv('DB_HOST') ?: 'localhost') . "<br>";
-    echo "🔌 Port: " . (getenv('DB_PORT') ?: '3306') . "<br>";
-    echo "👤 User: " . (getenv('DB_USERNAME') ?: 'root') . "<br>";
+    
+    // Support both naming conventions
+    $dbname = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: 'dx_cluster_web';
+    $username = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: 'root';
+    $password = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
+    $host = getenv('DB_HOST') ?: 'localhost';
+    $port = getenv('DB_PORT') ?: '3306';
+    
+    echo "📊 Database: $dbname<br>";
+    echo "🏠 Host: $host<br>";
+    echo "🔌 Port: $port<br>";
+    echo "👤 User: $username<br>";
     
     // Show password status (masked for security)
-    $password = getenv('DB_PASSWORD');
-    if ($password !== false && $password !== '') {
-        echo "🔑 Password: " . str_repeat('*', strlen($password)) . " (loaded)<br>";
+    if ($password !== '') {
+        echo "🔑 Password: " . str_repeat('*', strlen($password)) . " (loaded from " . (getenv('DB_PASSWORD') ? 'DB_PASSWORD' : 'DB_PASS') . ")<br>";
     } else {
-        echo "<div class='error'>❌ DB_PASSWORD is empty or not found!</div>";
+        echo "<div class='error'>❌ Password is empty or not found! (checked DB_PASSWORD and DB_PASS)</div>";
     }
     
     // Debug: Show raw .env content (first 10 lines only)

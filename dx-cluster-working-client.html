@@ -141,7 +141,8 @@ connectBtn.addEventListener('click', () => {
   // CHANGE THIS URL TO YOUR UBUNTU SERVER IP!
   // For local testing: ws://localhost:8080
   // For your Ubuntu server: ws://YOUR_UBUNTU_IP:8080
-  const url = `ws://localhost:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
+  // For wavelog domain: ws://cluster.wavelog.online:8080
+  const url = `ws://cluster.wavelog.online:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
   
   try {
     ws = new WebSocket(url);

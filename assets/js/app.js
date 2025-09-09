@@ -426,30 +426,19 @@ class DXClusterApp {
             // Use secure WebSocket if page is loaded over HTTPS, otherwise use insecure
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             
-            // Determine WebSocket host and port
+            // Determine WebSocket host
             let wsHost = window.location.hostname;
-            let wsPort = 8080; // Default port
             
-            // Check if we're running on localhost or a development environment
-            if (wsHost === 'localhost' || wsHost === '127.0.0.1' || wsHost.includes('192.168.')) {
-                // Use the same port as the page for development
-                wsPort = window.location.port || (protocol === 'wss' ? 443 : 80);
-            } else if (window.location.port) {
-                // If we're on a non-standard port, use that port
-                wsPort = window.location.port;
-            }
-            
-            // Build WebSocket URL
-            const wsUrl = `${protocol}://${wsHost}${wsPort ? ':' + wsPort : ''}/?cluster=${clusterId}&login=${encodeURIComponent(loginCallsign)}`;
-            console.log('Connecting to WebSocket:', wsUrl);
+            // Build WebSocket URL using Apache proxy path
+            // Use /ws/ path to proxy through Apache to Node.js bridge on port 8443
+            const wsUrl = `${protocol}://${wsHost}/ws/?host=cluster.om0rx.com&port=7300&login=${encodeURIComponent(loginCallsign)}`;
+            console.log('Connecting to WebSocket via Apache proxy:', wsUrl);
             console.log('Using login callsign:', loginCallsign);
             
             // Add debugging for connection issues
             console.log('Current page protocol:', window.location.protocol);
             console.log('Current page hostname:', window.location.hostname);
-            console.log('Current page port:', window.location.port);
-            console.log('WebSocket host will be:', wsHost);
-            console.log('WebSocket port will be:', wsPort);
+            console.log('WebSocket URL:', wsUrl);
             
             this.websocket = new WebSocket(wsUrl);
             

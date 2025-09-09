@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct WebSocket SSL Test</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #1a1a1a; color: #00ff00; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #002200; border: 1px solid #00ff00; }
+        .error { background: #220000; border: 1px solid #ff0000; color: #ff0000; }
+        .info { background: #002222; border: 1px solid #00ffff; color: #00ffff; }
+        .log { background: #111; padding: 10px; height: 400px; overflow-y: scroll; border: 1px solid #333; }
+        button { background: #333; color: #00ff00; border: 1px solid #555; padding: 10px; margin: 5px; cursor: pointer; }
+        button:hover { background: #444; }
+        input { background: #222; color: #00ff00; border: 1px solid #555; padding: 5px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔒 Direct WebSocket SSL Test</h1>
+    
+    <div class="info">
+        <strong>Testing WSS Connection to cluster.wavelog.online:8443</strong><br>
+        This will test the WebSocket SSL connection directly with enhanced error reporting.
+    </div>
+
+    <div>
+        <button onclick="testHTTP()">Test HTTP WebSocket (port 8080)</button>
+        <button onclick="testHTTPS()">Test HTTPS WebSocket (port 8443)</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div>
+        Host: <input type="text" id="host" value="cluster.om0rx.com">
+        Port: <input type="text" id="port" value="7300">
+        Callsign: <input type="text" id="callsign" value="om0rx">
+    </div>
+
+    <div id="status" class="status info">Ready to test...</div>
+    <div id="log" class="log"></div>
+
+    <script>
+        let currentWS = null;
+        const logDiv = document.getElementById('log');
+        const statusDiv = document.getElementById('status');
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff0000' : type === 'success' ? '#00ff00' : '#00ffff';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function closeCurrentConnection() {
+            if (currentWS) {
+                currentWS.close();
+                currentWS = null;
+            }
+        }
+
+        function testWebSocket(url, protocol) {
+            closeCurrentConnection();
+            
+            const host = document.getElementById('host').value;
+            const port = document.getElementById('port').value;
+            const callsign = document.getElementById('callsign').value;
+            
+            const fullUrl = `${url}?host=${host}&port=${port}&login=${callsign}`;
+            
+            addLog(`🔍 Testing ${protocol} WebSocket connection...`);
+            addLog(`📡 URL: ${fullUrl}`);
+            updateStatus(`Connecting via ${protocol}...`, 'info');
+
+            try {
+                currentWS = new WebSocket(fullUrl);
+                
+                const connectionTimeout = setTimeout(() => {
+                    addLog('⏰ Connection timeout (10 seconds)', 'error');
+                    updateStatus('Connection timeout!', 'error');
+                    closeCurrentConnection();
+                }, 10000);
+
+                currentWS.onopen = function(event) {
+                    clearTimeout(connectionTimeout);
+                    addLog(`✅ ${protocol} WebSocket connection opened successfully!`, 'success');
+                    updateStatus(`${protocol} Connected!`, 'success');
+                    
+                    // Log connection details
+                    addLog(`🔗 Ready state: ${currentWS.readyState}`);
+                    addLog(`🌐 URL: ${currentWS.url}`);
+                    addLog(`📋 Protocol: ${currentWS.protocol || 'none'}`);
+                    addLog(`🔧 Extensions: ${JSON.stringify(currentWS.extensions)}`);
+                };
+
+                currentWS.onmessage = function(event) {
+                    addLog(`📥 Received: ${event.data}`);
+                };
+
+                currentWS.onerror = function(error) {
+                    clearTimeout(connectionTimeout);
+                    addLog(`❌ ${protocol} WebSocket error occurred`, 'error');
+                    addLog(`🔍 Error object: ${JSON.stringify(error)}`, 'error');
+                    updateStatus(`${protocol} Connection error!`, 'error');
+                    
+                    // Try to get more error details
+                    setTimeout(() => {
+                        if (currentWS) {
+                            addLog(`🔍 Final ready state: ${currentWS.readyState}`, 'error');
+                        }
+                    }, 100);
+                };
+
+                currentWS.onclose = function(event) {
+                    clearTimeout(connectionTimeout);
+                    addLog(`🔌 ${protocol} WebSocket connection closed`, 'error');
+                    addLog(`📊 Close code: ${event.code}`, 'error');
+                    addLog(`📝 Close reason: ${event.reason || 'No reason provided'}`, 'error');
+                    addLog(`🔍 Was clean: ${event.wasClean}`, 'error');
+                    
+                    if (event.code === 1006) {
+                        addLog('💡 Code 1006 usually indicates connection failure (SSL/network issue)', 'error');
+                    }
+                    
+                    updateStatus(`${protocol} Connection closed (${event.code})`, 'error');
+                    currentWS = null;
+                };
+
+            } catch (exception) {
+                addLog(`💥 ${protocol} Exception creating WebSocket: ${exception.message}`, 'error');
+                addLog(`🔍 Exception stack: ${exception.stack}`, 'error');
+                updateStatus(`${protocol} Exception!`, 'error');
+            }
+        }
+
+        function testHTTP() {
+            testWebSocket('ws://cluster.wavelog.online:8080/', 'HTTP');
+        }
+
+        function testHTTPS() {
+            testWebSocket('wss://cluster.wavelog.online:8443/', 'HTTPS');
+        }
+
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+
+        // Auto-test on load
+        window.onload = function() {
+            addLog('🌐 Page loaded, WebSocket support: ' + (typeof WebSocket !== 'undefined' ? 'Yes' : 'No'));
+            addLog('🔒 Current page protocol: ' + window.location.protocol);
+            addLog('🌍 User agent: ' + navigator.userAgent);
+            
+            if (window.location.protocol === 'https:') {
+                addLog('✅ Page loaded via HTTPS - HTTPS WebSocket should work');
+            } else {
+                addLog('⚠️ Page loaded via HTTP - HTTPS WebSocket may be blocked by mixed content policy');
+            }
+        };
+    </script>
+</body>
+</html>

@@ -162,15 +162,60 @@ function getConnectionStatus($connectionId = null) {
 }
 
 function startClusterConnection($cluster, $loginCallsign) {
-    // Generate a unique connection ID
     $connectionId = uniqid('conn_' . $cluster['id'] . '_');
     
-    // TODO: Implement real cluster connection
-    // 1. Open a socket connection to the cluster
-    // 2. Store the connection details in the database
-    // 3. Start a background process to maintain the connection
+    // Create real TCP socket connection to DX cluster
+    error_log("🌐 Opening TCP connection to {$cluster['host']}:{$cluster['port']}");
     
-    // No demo data - real connections only
+    $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    if ($socket === false) {
+        throw new Exception("Could not create socket: " . socket_strerror(socket_last_error()));
+    }
+    
+    // Set socket timeout
+    socket_set_option($socket, SOL_SOCKET, SO_RCVTIMEO, array("sec" => 10, "usec" => 0));
+    socket_set_option($socket, SOL_SOCKET, SO_SNDTIMEO, array("sec" => 10, "usec" => 0));
+    
+    $result = socket_connect($socket, $cluster['host'], $cluster['port']);
+    if ($result === false) {
+        $error = socket_strerror(socket_last_error($socket));
+        socket_close($socket);
+        throw new Exception("Connection to {$cluster['host']}:{$cluster['port']} failed: {$error}");
+    }
+    
+    error_log("✅ Connected to DX cluster {$cluster['name']} ({$cluster['host']}:{$cluster['port']})");
+    
+    // Read initial response from cluster
+    $response = socket_read($socket, 2048);
+    if ($response !== false) {
+        error_log("📡 Initial cluster response: " . trim($response));
+        
+        // Check if cluster asks for login
+        if (stripos($response, 'call') !== false || stripos($response, 'login') !== false) {
+            error_log("🔐 Sending login callsign: {$loginCallsign}");
+            socket_write($socket, $loginCallsign . "\r\n");
+            
+            // Read login confirmation
+            $loginResponse = socket_read($socket, 2048);
+            if ($loginResponse !== false) {
+                error_log("📡 Login response: " . trim($loginResponse));
+            }
+        }
+    }
+    
+    // Store connection info in session/database for later use
+    $_SESSION['cluster_connection'] = [
+        'id' => $connectionId,
+        'socket' => $socket,
+        'cluster' => $cluster,
+        'login_callsign' => $loginCallsign,
+        'connected_at' => time()
+    ];
+    
+    // Start background process to handle real-time data (simplified)
+    // In production, this would be a separate background service
+    
+    socket_close($socket); // For now, close after initial handshake
     
     return $connectionId;
 }

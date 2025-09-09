@@ -84,7 +84,7 @@ INSERT INTO dx_clusters (name, host, port, description) VALUES
 ('OH2AQ', 'oh2aq.kolumbus.fi', 41112, 'Finnish DX cluster'),
 ('VE7CC', 've7cc.net', 23, 'Canadian DX cluster'),
 ('W3LPL', 'w3lpl.net', 7300, 'US East Coast DX cluster'),
-('K3LR', 'k3lr.com', 7300, 'US East Coast DX cluster');
+('OM0RX Cluster', 'cluster.om0rx.com', 7300, 'OM0RX Personal DX Cluster');
 
 -- Create indexes for better performance
 CREATE INDEX idx_spots_callsign_band ON dx_spots(callsign, band);

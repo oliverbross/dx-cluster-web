@@ -1,6 +1,6 @@
 <?php
 /**
- * DX Clusters API - Fetch and manage DX cluster list
+ * DX Clusters API
  * 
  * @author Kilo Code
  * @version 1.0.0
@@ -15,7 +15,12 @@ class ClustersAPI {
     private $db;
     
     public function __construct() {
-        $this->db = new Database();
+        try {
+            $this->db = new Database();
+        } catch (Exception $e) {
+            // If database connection fails, we'll return hardcoded clusters
+            $this->db = null;
+        }
     }
     
     /**
@@ -29,7 +34,13 @@ class ClustersAPI {
                 $this->getClusters();
                 break;
             case 'POST':
-                $this->updateClusters();
+                $this->addCluster();
+                break;
+            case 'PUT':
+                $this->updateCluster();
+                break;
+            case 'DELETE':
+                $this->deleteCluster();
                 break;
             default:
                 http_response_code(405);
@@ -40,226 +51,205 @@ class ClustersAPI {
     }
     
     /**
-     * Get list of DX clusters
+     * Get available DX clusters
      */
     private function getClusters() {
         try {
-            // First try to get from database
-            $clusters = $this->getClustersFromDatabase();
-            
-            // If database is empty or old, fetch from ng3k.com
-            if (empty($clusters) || $this->shouldUpdateClusters()) {
-                $this->fetchAndStoreClusters();
-                $clusters = $this->getClustersFromDatabase();
-            }
-            
-            echo json_encode($clusters);
-        } catch (Exception $e) {
-            error_log("Clusters API error: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch clusters']);
-        }
-    }
-    
-    /**
-     * Get clusters from database
-     */
-    private function getClustersFromDatabase() {
-        $sql = "SELECT id, name, host, port, description, is_active 
-                FROM dx_clusters 
-                WHERE is_active = 1 
-                ORDER BY name";
-        
-        $result = $this->db->query($sql);
-        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : [];
-    }
-    
-    /**
-     * Check if clusters should be updated (daily update)
-     */
-    private function shouldUpdateClusters() {
-        $sql = "SELECT MAX(last_updated) as last_update FROM dx_clusters";
-        $result = $this->db->query($sql);
-        
-        if ($result) {
-            $row = $result->fetch(PDO::FETCH_ASSOC);
-            if ($row['last_update']) {
-                $lastUpdate = strtotime($row['last_update']);
-                $dayAgo = time() - (24 * 60 * 60);
-                return $lastUpdate < $dayAgo;
-            }
-        }
-        
-        return true; // Update if no data
-    }
-    
-    /**
-     * Fetch clusters from ng3k.com and store in database
-     */
-    private function fetchAndStoreClusters() {
-        try {
-            $html = $this->fetchNG3KPage();
-            $clusters = $this->parseNG3KClusters($html);
-            $this->storeClusters($clusters);
-        } catch (Exception $e) {
-            error_log("Failed to fetch clusters from ng3k.com: " . $e->getMessage());
-            // Don't throw - we can still use existing database data
-        }
-    }
-    
-    /**
-     * Fetch the ng3k.com cluster page
-     */
-    private function fetchNG3KPage() {
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 30,
-                'user_agent' => 'DX Cluster Web Application/1.0'
-            ]
-        ]);
-        
-        $html = file_get_contents(NG3K_CLUSTER_URL, false, $context);
-        
-        if ($html === false) {
-            throw new Exception('Failed to fetch ng3k.com page');
-        }
-        
-        return $html;
-    }
-    
-    /**
-     * Parse clusters from ng3k.com HTML
-     */
-    private function parseNG3KClusters($html) {
-        $clusters = [];
-        
-        // Parse the HTML to extract cluster information
-        // The ng3k.com page has clusters in a specific format
-        // This is a simplified parser - you might need to adjust based on actual page structure
-        
-        $dom = new DOMDocument();
-        @$dom->loadHTML($html);
-        $xpath = new DOMXPath($dom);
-        
-        // Look for table rows or specific patterns
-        // This is a basic implementation - adjust based on actual ng3k.com structure
-        $rows = $xpath->query('//tr');
-        
-        foreach ($rows as $row) {
-            $cells = $row->getElementsByTagName('td');
-            if ($cells->length >= 3) {
-                $name = trim($cells->item(0)->textContent);
-                $address = trim($cells->item(1)->textContent);
-                $port = trim($cells->item(2)->textContent);
+            if ($this->db && $this->db->tableExists('dx_clusters')) {
+                $sql = "SELECT id, name, host, port, description, is_active 
+                        FROM dx_clusters 
+                        WHERE is_active = 1 
+                        ORDER BY name";
+                $result = $this->db->query($sql);
+                $clusters = $result->fetchAll();
                 
-                // Extract host and port
-                if (preg_match('/^([^:]+):?(\d+)?$/', $address, $matches)) {
-                    $host = $matches[1];
-                    $portNum = isset($matches[2]) ? intval($matches[2]) : intval($port);
-                    
-                    if ($host && $portNum > 0) {
-                        $clusters[] = [
-                            'name' => $name,
-                            'host' => $host,
-                            'port' => $portNum,
-                            'description' => "Cluster from ng3k.com"
-                        ];
-                    }
+                if (!empty($clusters)) {
+                    echo json_encode($clusters);
+                    return;
                 }
             }
-        }
-        
-        // If parsing fails, return some default clusters
-        if (empty($clusters)) {
+            
+            // Fallback to hardcoded clusters if database is not available
             $clusters = $this->getDefaultClusters();
+            echo json_encode($clusters);
+            
+        } catch (Exception $e) {
+            error_log("Clusters API error: " . $e->getMessage());
+            
+            // Return default clusters as fallback
+            $clusters = $this->getDefaultClusters();
+            echo json_encode($clusters);
         }
-        
-        return $clusters;
     }
     
     /**
-     * Get default clusters if ng3k.com parsing fails
+     * Add a new cluster
+     */
+    private function addCluster() {
+        try {
+            if (!$this->db) {
+                http_response_code(503);
+                echo json_encode(['error' => 'Database not available']);
+                return;
+            }
+            
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input || !isset($input['name']) || !isset($input['host']) || !isset($input['port'])) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Name, host, and port are required']);
+                return;
+            }
+            
+            $sql = "INSERT INTO dx_clusters (name, host, port, description) VALUES (?, ?, ?, ?)";
+            $this->db->execute($sql, [
+                $input['name'],
+                $input['host'],
+                $input['port'],
+                $input['description'] ?? ''
+            ]);
+            
+            $clusterId = $this->db->lastInsertId();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cluster added successfully',
+                'cluster_id' => $clusterId
+            ]);
+        } catch (Exception $e) {
+            error_log("Add cluster error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to add cluster']);
+        }
+    }
+    
+    /**
+     * Update cluster
+     */
+    private function updateCluster() {
+        try {
+            if (!$this->db) {
+                http_response_code(503);
+                echo json_encode(['error' => 'Database not available']);
+                return;
+            }
+            
+            $clusterId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+            
+            if (!$clusterId) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Cluster ID required']);
+                return;
+            }
+            
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid JSON data']);
+                return;
+            }
+            
+            $sql = "UPDATE dx_clusters SET name = ?, host = ?, port = ?, description = ? WHERE id = ?";
+            $this->db->execute($sql, [
+                $input['name'],
+                $input['host'],
+                $input['port'],
+                $input['description'] ?? '',
+                $clusterId
+            ]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cluster updated successfully'
+            ]);
+        } catch (Exception $e) {
+            error_log("Update cluster error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to update cluster']);
+        }
+    }
+    
+    /**
+     * Delete cluster
+     */
+    private function deleteCluster() {
+        try {
+            if (!$this->db) {
+                http_response_code(503);
+                echo json_encode(['error' => 'Database not available']);
+                return;
+            }
+            
+            $clusterId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+            
+            if (!$clusterId) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Cluster ID required']);
+                return;
+            }
+            
+            $sql = "UPDATE dx_clusters SET is_active = 0 WHERE id = ?";
+            $this->db->execute($sql, [$clusterId]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cluster deactivated successfully'
+            ]);
+        } catch (Exception $e) {
+            error_log("Delete cluster error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete cluster']);
+        }
+    }
+    
+    /**
+     * Get default clusters as fallback
      */
     private function getDefaultClusters() {
         return [
             [
+                'id' => 1,
                 'name' => 'DX Summit',
                 'host' => 'dxc.dxsummit.fi',
                 'port' => 8000,
-                'description' => 'Popular DX cluster with web interface'
+                'description' => 'Popular DX cluster with web interface',
+                'is_active' => 1
             ],
             [
+                'id' => 2,
                 'name' => 'OH2AQ',
                 'host' => 'oh2aq.kolumbus.fi',
                 'port' => 41112,
-                'description' => 'Finnish DX cluster'
+                'description' => 'Finnish DX cluster',
+                'is_active' => 1
             ],
             [
+                'id' => 3,
                 'name' => 'VE7CC',
                 'host' => 've7cc.net',
                 'port' => 23,
-                'description' => 'Canadian DX cluster'
+                'description' => 'Canadian DX cluster',
+                'is_active' => 1
             ],
             [
+                'id' => 4,
                 'name' => 'W3LPL',
                 'host' => 'w3lpl.net',
                 'port' => 7300,
-                'description' => 'US East Coast DX cluster'
+                'description' => 'US East Coast DX cluster',
+                'is_active' => 1
             ],
             [
-                'name' => 'K3LR',
-                'host' => 'k3lr.com',
+                'id' => 5,
+                'name' => 'OM0RX Cluster',
+                'host' => 'cluster.om0rx.com',
                 'port' => 7300,
-                'description' => 'US East Coast DX cluster'
-            ],
-            [
-                'name' => 'DX Spider',
-                'host' => 'dxspider.net',
-                'port' => 8000,
-                'description' => 'DX Spider cluster network'
+                'description' => 'OM0RX Personal DX Cluster',
+                'is_active' => 1
             ]
         ];
-    }
-    
-    /**
-     * Store clusters in database
-     */
-    private function storeClusters($clusters) {
-        try {
-            $this->db->beginTransaction();
-            
-            // Clear existing clusters (except custom ones)
-            $sql = "DELETE FROM dx_clusters WHERE description LIKE '%ng3k.com%'";
-            $this->db->execute($sql);
-            
-            // Insert new clusters
-            $sql = "INSERT INTO dx_clusters (name, host, port, description, is_active) 
-                    VALUES (?, ?, ?, ?, 1)";
-            
-            foreach ($clusters as $cluster) {
-                $this->db->execute($sql, [
-                    $cluster['name'],
-                    $cluster['host'],
-                    $cluster['port'],
-                    $cluster['description']
-                ]);
-            }
-            
-            $this->db->commit();
-        } catch (Exception $e) {
-            $this->db->rollback();
-            throw $e;
-        }
-    }
-    
-    /**
-     * Update clusters (admin function)
-     */
-    private function updateClusters() {
-        // This could be used for manual cluster updates
-        // For now, just trigger a refresh
-        $this->fetchAndStoreClusters();
-        $this->getClusters();
     }
 }
 

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DX Cluster Test - HTTP Version</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background:#0b0d10; color:#e6edf3; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 12px 16px; background:#11161c; border-bottom:1px solid #1f2630; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input, button { padding:8px 10px; border-radius:8px; border:1px solid #2b3440; background:#0f141a; color:#e6edf3; }
+  button { cursor:pointer; transition: all 0.2s; }
+  button:hover:not(:disabled) { background:#1a2332; border-color:#3d4954; }
+  button:disabled { opacity:0.5; cursor:not-allowed; }
+  #status { margin-left:auto; font-size:12px; opacity:0.8; padding:4px 8px; border-radius:4px; }
+  #status.connected { background:#0f3d2f; color:#7ce083; }
+  #status.connecting { background:#3d2f0f; color:#e8c547; }
+  #status.disconnected { background:#3d0f0f; color:#f87171; }
+  #term { padding:12px 16px; flex:1; overflow:auto; white-space:pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; line-height:1.4; }
+  #sendbar { display:flex; gap:8px; padding:8px 16px; border-top:1px solid #1f2630; background:#0d1218; }
+  #cmd { flex:1; }
+  .line { margin:2px 0; }
+  .rx { color:#b3e5ff; }
+  .tx { color:#9be28f; font-weight:500; }
+  .sys { color:#ffcf8e; font-weight:500; }
+  .error { color:#f87171; font-weight:500; }
+  .spot { color:#fbbf24; background:rgba(251,191,36,0.1); }
+  
+  .preset-commands { display:flex; gap:4px; padding:8px 16px; background:#11161c; border-bottom:1px solid #1f2630; flex-wrap:wrap; }
+  .preset-btn { font-size:11px; padding:4px 8px; background:#1a2332; border-color:#2b3440; }
+  
+  .info-banner { background:#1e3a8a; color:#93c5fd; padding:8px 16px; text-align:center; font-size:14px; }
+</style>
+</head>
+<body>
+  <div class="info-banner">
+    🧪 <strong>HTTP Test Version</strong> - Use this to test WebSocket connection without SSL issues
+  </div>
+  
+  <header>
+    <label>Host <input id="host" value="cluster.om0rx.com" placeholder="DX cluster hostname"></label>
+    <label>Port <input id="port" value="7300" size="6" placeholder="7300"></label>
+    <label>Login <input id="login" value="om0rx" placeholder="Your callsign"></label>
+    <button id="connect">Connect</button>
+    <button id="disconnect" disabled>Disconnect</button>
+    <div id="status" class="disconnected">Disconnected</div>
+  </header>
+
+  <div class="preset-commands">
+    <button class="preset-btn" id="showdx" disabled>sh/dx</button>
+    <button class="preset-btn" onclick="sendCommand('sh/dx/10')" disabled>sh/dx/10</button>
+    <button class="preset-btn" onclick="sendCommand('sh/wwv')" disabled>sh/wwv</button>
+    <button class="preset-btn" onclick="sendCommand('sh/wcy')" disabled>sh/wcy</button>
+    <button class="preset-btn" onclick="sendCommand('sh/announce')" disabled>sh/announce</button>
+    <button class="preset-btn" onclick="sendCommand('help')" disabled>help</button>
+    <button class="preset-btn" onclick="clearTerminal()">Clear</button>
+  </div>
+
+  <div id="term"></div>
+
+  <div id="sendbar">
+    <input id="cmd" placeholder="Type a cluster command (e.g., sh/dx, sh/wwv, sh/announce) and press Enter" />
+    <button id="send" disabled>Send</button>
+  </div>
+
+<script>
+let ws = null;
+
+const term = document.getElementById('term');
+const status = document.getElementById('status');
+const hostEl = document.getElementById('host');
+const portEl = document.getElementById('port');
+const loginEl = document.getElementById('login');
+const connectBtn = document.getElementById('connect');
+const disconnectBtn = document.getElementById('disconnect');
+const sendBtn = document.getElementById('send');
+const cmdEl = document.getElementById('cmd');
+const showdxBtn = document.getElementById('showdx');
+
+function appendLine(text, cls="rx") {
+  const p = document.createElement('div');
+  p.className = 'line ' + cls;
+  p.textContent = text.replace(/\r/g,'');
+  
+  // Highlight DX spots
+  if (text.includes('DX de ')) {
+    p.classList.add('spot');
+  }
+  
+  term.appendChild(p);
+  term.scrollTop = term.scrollHeight;
+  
+  // Keep only last 1000 lines
+  while (term.children.length > 1000) {
+    term.removeChild(term.firstChild);
+  }
+}
+
+function setStatus(state, message = '') {
+  status.className = state;
+  status.textContent = message || state;
+  
+  const isConnected = (state === 'connected');
+  connectBtn.disabled = isConnected;
+  disconnectBtn.disabled = !isConnected;
+  sendBtn.disabled = !isConnected;
+  showdxBtn.disabled = !isConnected;
+  
+  // Enable/disable preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    if (btn.textContent !== 'Clear') {
+      btn.disabled = !isConnected;
+    }
+  });
+}
+
+function clearTerminal() {
+  term.innerHTML = '';
+  appendLine('🧹 Terminal cleared', 'sys');
+}
+
+function sendCommand(command) {
+  if (!command) {
+    command = cmdEl.value.trim();
+    cmdEl.value = '';
+  }
+  
+  if (!command || !ws || ws.readyState !== WebSocket.OPEN) return;
+  
+  ws.send(command);
+  appendLine(`> ${command}`, 'tx');
+  cmdEl.focus();
+}
+
+connectBtn.addEventListener('click', () => {
+  const host = hostEl.value.trim();
+  const port = portEl.value.trim();
+  const login = loginEl.value.trim();
+  
+  if (!host || !port || !login) {
+    appendLine('❌ Please fill in all connection fields', 'error');
+    return;
+  }
+  
+  setStatus('connecting', 'Connecting...');
+  appendLine(`🔗 Connecting to ${host}:${port} as ${login}...`, 'sys');
+  
+  // Force HTTP WebSocket connection (no SSL)
+  const url = `ws://cluster.wavelog.online:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
+  
+  appendLine(`🌐 WebSocket URL: ${url}`, 'sys');
+  
+  try {
+    ws = new WebSocket(url);
+
+    ws.addEventListener('open', () => {
+      setStatus('connected', `Connected to ${host}:${port}`);
+      appendLine(`✅ WebSocket connected!`, 'sys');
+      appendLine(`📡 Waiting for cluster welcome message...`, 'sys');
+      cmdEl.focus();
+    });
+
+    ws.addEventListener('message', (ev) => {
+      appendLine(ev.data, 'rx');
+      
+      // Show first successful message
+      if (ev.data.includes('Welcome') || ev.data.includes('login')) {
+        appendLine(`🎉 SUCCESS! Connected to DX cluster!`, 'sys');
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      setStatus('disconnected', 'Disconnected');
+      appendLine('🔌 Connection closed', 'sys');
+    });
+
+    ws.addEventListener('error', (e) => {
+      appendLine('❌ WebSocket error - is the bridge running on port 8080?', 'error');
+      setStatus('disconnected', 'Connection error');
+    });
+    
+  } catch (error) {
+    appendLine(`❌ Connection error: ${error.message}`, 'error');
+    setStatus('disconnected', 'Connection error');
+  }
+});
+
+disconnectBtn.addEventListener('click', () => {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+});
+
+sendBtn.addEventListener('click', () => sendCommand());
+cmdEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendCommand();
+});
+
+showdxBtn.addEventListener('click', () => {
+  sendCommand('sh/dx');
+});
+
+// Initialize
+setStatus('disconnected', 'Ready to connect');
+appendLine('🌐 DX Cluster HTTP Test Client', 'sys');
+appendLine('📡 Bridge running on: ws://cluster.wavelog.online:8080', 'sys');
+appendLine('🧪 This version bypasses SSL issues for testing', 'sys');
+appendLine('', 'sys');
+</script>
+</body>
+</html>

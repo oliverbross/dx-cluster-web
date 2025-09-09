@@ -345,6 +345,8 @@
                             <input type="url" class="form-input" id="wavelog-url" placeholder="https://your-wavelog.com" autocomplete="url">
                         </div>
                         <form id="wavelog-config-form">
+                            <!-- Hidden username field for accessibility -->
+                            <input type="text" name="username" style="display:none" autocomplete="username">
                             <div class="form-group">
                                 <label class="form-label">API Key</label>
                                 <input type="password" class="form-input" id="wavelog-api-key" placeholder="Your API key" autocomplete="current-password">
@@ -524,6 +526,8 @@
                 </div>
                 <div class="card-body">
                     <form id="change-password-form">
+                        <!-- Hidden username field for accessibility -->
+                        <input type="text" name="username" style="display:none" autocomplete="username">
                         <div class="form-group">
                             <label class="form-label">Current Password</label>
                             <input type="password" class="form-input" id="current-password" placeholder="Your current password" required autocomplete="current-password">

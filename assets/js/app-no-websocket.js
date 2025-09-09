@@ -86,17 +86,44 @@ class DXClusterApp {
     
     async loadClusters() {
         try {
+            console.log('🔍 LOADING CLUSTERS DEBUG:');
+            console.log('- API URL: /api/clusters.php');
+            
             const response = await fetch('/api/clusters.php');
-            const result = await response.json();
+            console.log('📡 Clusters API Response:');
+            console.log('- Status:', response.status);
+            console.log('- Status Text:', response.statusText);
+            console.log('- Headers:', [...response.headers.entries()]);
+            
+            if (!response.ok) {
+                console.error('❌ Clusters API HTTP Error:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('❌ Clusters Error Response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const responseText = await response.text();
+            console.log('📄 Clusters Raw response:', responseText);
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log('✅ Clusters Parsed JSON:', result);
+            } catch (jsonError) {
+                console.error('❌ Clusters JSON Parse Error:', jsonError);
+                throw new Error(`Invalid JSON: ${jsonError.message}`);
+            }
             
             if (result.success && result.clusters) {
+                console.log('✅ Using clusters from API response:', result.clusters.length, 'clusters');
                 this.populateClusterSelect(result.clusters);
             } else {
-                console.warn('Failed to load clusters, using fallback');
+                console.warn('⚠️ Failed to load clusters, using fallback. Result:', result);
                 this.populateClusterSelect(this.getFallbackClusters());
             }
         } catch (error) {
-            console.error('Error loading clusters:', error);
+            console.error('❌ Error loading clusters:', error);
+            console.log('🔄 Using fallback clusters');
             this.populateClusterSelect(this.getFallbackClusters());
         }
     }
@@ -140,17 +167,58 @@ class DXClusterApp {
             this.updateConnectionStatus('connecting');
             this.addTerminalLine('🔌 Connecting to cluster...');
             
+            // Comprehensive debugging
+            console.log('🔍 CONNECTION DEBUG:');
+            console.log('- Cluster ID:', clusterId);
+            console.log('- Login Callsign:', loginCallsign);
+            console.log('- API URL: /api/cluster-connection.php');
+            
             const formData = new FormData();
             formData.append('action', 'connect');
             formData.append('cluster_id', clusterId);
             formData.append('login_callsign', loginCallsign || 'GUEST');
             
+            console.log('- FormData contents:');
+            for (const [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+            
+            console.log('🌐 Making API request...');
             const response = await fetch('/api/cluster-connection.php', {
                 method: 'POST',
                 body: formData
             });
             
-            const result = await response.json();
+            console.log('📡 Response received:');
+            console.log('- Status:', response.status);
+            console.log('- Status Text:', response.statusText);
+            console.log('- Headers:', [...response.headers.entries()]);
+            
+            // Check if response is successful
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('❌ Error Response Body:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}\nResponse: ${errorText}`);
+            }
+            
+            // Get response text first, then try to parse JSON
+            const responseText = await response.text();
+            console.log('📄 Raw response text:', responseText);
+            
+            if (!responseText || responseText.trim() === '') {
+                throw new Error('Empty response from server');
+            }
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log('✅ Parsed JSON result:', result);
+            } catch (jsonError) {
+                console.error('❌ JSON Parse Error:', jsonError);
+                console.error('❌ Response was:', responseText);
+                throw new Error(`Invalid JSON response: ${jsonError.message}\nResponse: ${responseText}`);
+            }
             
             if (result.success) {
                 this.connectionId = result.connection_id;

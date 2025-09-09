@@ -38,15 +38,21 @@ switch ($action) {
 
 function connectToCluster() {
     try {
+        error_log("🔍 ConnectToCluster: Starting connection process");
+        
         $clusterId = (int)($_POST['cluster_id'] ?? 0);
         $loginCallsign = trim($_POST['login_callsign'] ?? '');
         
+        error_log("🔍 ConnectToCluster: clusterId={$clusterId}, loginCallsign={$loginCallsign}");
+        
         if (!$clusterId || !$loginCallsign) {
+            error_log("❌ ConnectToCluster: Missing required parameters");
             jsonResponse(['error' => 'Cluster ID and login callsign required'], 400);
             return;
         }
         
         // Get cluster details
+        error_log("🔍 ConnectToCluster: Getting database connection");
         $db = getDatabase();
         $stmt = $db->prepare("SELECT * FROM dx_clusters WHERE id = ? AND is_active = 1");
         $stmt->execute([$clusterId]);

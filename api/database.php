@@ -203,4 +203,19 @@ class DatabaseUtils {
         return password_verify($password, $hash);
     }
 }
+
+/**
+ * Global database connection function
+ * Returns a Database instance
+ */
+function getDatabase() {
+    static $database = null;
+    
+    if ($database === null) {
+        $database = new Database();
+    }
+    
+    return $database->getConnection(); // Return PDO connection for compatibility
+}
+
 ?>

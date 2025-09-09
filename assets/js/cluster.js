@@ -44,8 +44,24 @@ Object.assign(DXClusterApp.prototype, {
      */
     async processSpot(spotData) {
         try {
-            // Parse spot data
-            const spot = this.parseSpotData(spotData);
+            // Check if spotData is already parsed (object) or needs parsing (string)
+            let spot;
+            if (typeof spotData === 'object' && spotData.dxCall && spotData.frequency) {
+                // Already parsed object from server - map fields to expected format
+                spot = {
+                    callsign: spotData.dxCall,
+                    spotter: spotData.deCall,
+                    frequency: spotData.frequency,
+                    time: spotData.time,
+                    comment: spotData.comment,
+                    band: spotData.band,
+                    mode: spotData.mode,
+                    timestamp: spotData.timestamp
+                };
+            } else {
+                // Raw text data that needs parsing
+                spot = this.parseSpotData(spotData);
+            }
             if (!spot) return;
 
             // Generate unique key for spot

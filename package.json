@@ -1,0 +1,23 @@
+{
+  "name": "dx-cluster-web",
+  "version": "1.0.0",
+  "description": "A modern, responsive web application for ham radio operators to monitor DX clusters with Wavelog integration.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oliverbross/dx-cluster-web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/oliverbross/dx-cluster-web/issues"
+  },
+  "homepage": "https://github.com/oliverbross/dx-cluster-web#readme",
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

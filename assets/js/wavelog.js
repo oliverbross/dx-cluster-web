@@ -27,19 +27,16 @@ Object.assign(DXClusterApp.prototype, {
         try {
             this.updateWavelogStatus('connecting');
             
-            // Test connection by fetching station info
-            const stationInfo = await this.fetchStationInfo(url, apiKey);
-            console.log('Wavelog station info response:', stationInfo);
-            
-            if (stationInfo && stationInfo.length > 0) {
+            // Test connection using private lookup (recommended approach)
+            const testResult = await this.testPrivateLookup(url, apiKey);
+            console.log('Wavelog test response:', testResult);
+
+            if (testResult) {
                 this.updateWavelogStatus('connected');
                 this.showNotification('Wavelog connection successful!', 'success');
-                
-                // Update UI with station info
-                const station = stationInfo[0];
-                this.addTerminalLine(`Wavelog connected: ${station.station_callsign} (${station.station_gridsquare})`);
+                this.addTerminalLine('Wavelog connected successfully');
             } else {
-                throw new Error('No station data received');
+                throw new Error('Connection test failed');
             }
         } catch (error) {
             console.error('Wavelog connection test failed:', error);
@@ -81,6 +78,37 @@ Object.assign(DXClusterApp.prototype, {
                 text.textContent = 'Not Configured';
                 break;
         }
+    },
+
+    /**
+     * Test Wavelog connection using private lookup
+     */
+    async testPrivateLookup(url = null, apiKey = null) {
+        // Use proxy to avoid CORS issues
+        const proxyUrl = 'api/wavelog-proxy.php';
+
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                endpoint: '/private_lookup',
+                data: {
+                    key: apiKey || this.preferences.wavelogApiKey,
+                    callsign: 'HB9HIL', // Test callsign from working example
+                    band: '20m',
+                    mode: 'CW'
+                }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data; // Return the response data
     },
 
     /**
@@ -152,12 +180,12 @@ Object.assign(DXClusterApp.prototype, {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                endpoint: 'logbook_check_callsign',
+                endpoint: '/private_lookup',
                 data: {
                     key: this.preferences.wavelogApiKey,
-                    logbook_public_slug: this.preferences.wavelogLogbookSlug,
-                    band: spot.band,
-                    callsign: spot.callsign
+                    callsign: spot.callsign,
+                    band: spot.band !== 'Unknown' ? spot.band : undefined,
+                    mode: spot.mode
                 }
             })
         });

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IARU Region 1 HF Bandplan - DX Cluster Web</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        .bandplan-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-6);
+        }
+
+        .bandplan-header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+
+        .bandplan-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: var(--space-6);
+        }
+
+        .bandplan-table th,
+        .bandplan-table td {
+            padding: var(--space-3);
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .bandplan-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .bandplan-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .frequency-input {
+            width: 100px;
+            padding: var(--space-2);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .mode-select {
+            width: 80px;
+            padding: var(--space-2);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        .band-section {
+            margin-bottom: var(--space-8);
+        }
+
+        .band-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--space-4);
+            color: var(--primary-color);
+        }
+
+        .add-row-btn {
+            margin-bottom: var(--space-4);
+        }
+
+        .save-btn {
+            position: fixed;
+            bottom: var(--space-4);
+            right: var(--space-4);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">DX Cluster Web</a>
+            <ul class="navbar-nav">
+                <li><a href="index.html#dashboard" class="nav-link">Dashboard</a></li>
+                <li><a href="index.html#spots" class="nav-link">DX Spots</a></li>
+                <li><a href="index.html#terminal" class="nav-link">Terminal</a></li>
+                <li><a href="index.html#settings" class="nav-link">Settings</a></li>
+                <li><a href="bandplan.html" class="nav-link active">📊 Bandplan</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="bandplan-container">
+        <div class="bandplan-header">
+            <h1>IARU Region 1 HF Bandplan</h1>
+            <p>Configure frequency ranges and modes for proper mode detection</p>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">160m Band (1.8 - 2.0 MHz)</h2>
+            <table class="bandplan-table" id="band-160m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="135700" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="135800" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="1800000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="1837999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="1838000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="1839999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI" selected>DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="1840000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="2000000" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE" selected>PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-160m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">80m Band (3.5 - 4.0 MHz)</h2>
+            <table class="bandplan-table" id="band-80m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="3500000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="3569999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="3570000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="3599999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI" selected>DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="3600000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="4000000" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE" selected>PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-80m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">40m Band (7.0 - 7.3 MHz)</h2>
+            <table class="bandplan-table" id="band-40m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="7000000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="7039999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="7040000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="7299999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE" selected>PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-40m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">30m Band (10.1 - 10.15 MHz)</h2>
+            <table class="bandplan-table" id="band-30m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="10100000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="10149999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-30m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">20m Band (14.0 - 14.35 MHz)</h2>
+            <table class="bandplan-table" id="band-20m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="14000000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="14069999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="14070000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="14349999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW">CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE" selected>PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-20m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">17m Band (18.068 - 18.168 MHz)</h2>
+            <table class="bandplan-table" id="band-17m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="18068000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="18167999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-17m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">15m Band (21.0 - 21.45 MHz)</h2>
+            <table class="bandplan-table" id="band-15m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="21000000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="21449999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-15m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">12m Band (24.89 - 24.99 MHz)</h2>
+            <table class="bandplan-table" id="band-12m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="24890000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="24989999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-12m')">Add Row</button>
+        </div>
+
+        <div class="band-section">
+            <h2 class="band-title">10m Band (28.0 - 29.7 MHz)</h2>
+            <table class="bandplan-table" id="band-10m">
+                <thead>
+                    <tr>
+                        <th>Frequency From (Hz)</th>
+                        <th>Frequency To (Hz)</th>
+                        <th>Mode</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" class="frequency-input" value="28000000" step="100"></td>
+                        <td><input type="number" class="frequency-input" value="29699999" step="100"></td>
+                        <td>
+                            <select class="mode-select">
+                                <option value="CW" selected>CW</option>
+                                <option value="DIGI">DIGI</option>
+                                <option value="PHONE">PHONE</option>
+                            </select>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-primary add-row-btn" onclick="addRow('band-10m')">Add Row</button>
+        </div>
+
+        <button class="btn btn-primary save-btn" onclick="saveBandplan()">Save Bandplan</button>
+    </div>
+
+    <script>
+        // Load saved bandplan from localStorage
+        function loadBandplan() {
+            const saved = localStorage.getItem('dx-bandplan');
+            if (saved) {
+                const bandplan = JSON.parse(saved);
+                // Apply saved values to form
+                Object.keys(bandplan).forEach(bandId => {
+                    const table = document.getElementById(bandId);
+                    if (table) {
+                        const tbody = table.querySelector('tbody');
+                        tbody.innerHTML = '';
+
+                        bandplan[bandId].forEach(row => {
+                            addRowToTable(bandId, row);
+                        });
+                    }
+                });
+            }
+        }
+
+        // Add row to table
+        function addRow(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const tbody = table.querySelector('tbody');
+            const newRow = {
+                from: '',
+                to: '',
+                mode: 'CW'
+            };
+
+            addRowToTable(tableId, newRow);
+        }
+
+        // Add row to table with data
+        function addRowToTable(tableId, rowData) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const tbody = table.querySelector('tbody');
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td><input type="number" class="frequency-input" value="${rowData.from}" step="100"></td>
+                <td><input type="number" class="frequency-input" value="${rowData.to}" step="100"></td>
+                <td>
+                    <select class="mode-select">
+                        <option value="CW" ${rowData.mode === 'CW' ? 'selected' : ''}>CW</option>
+                        <option value="DIGI" ${rowData.mode === 'DIGI' ? 'selected' : ''}>DIGI</option>
+                        <option value="PHONE" ${rowData.mode === 'PHONE' ? 'selected' : ''}>PHONE</option>
+                    </select>
+                </td>
+                <td class="action-buttons">
+                    <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        }
+
+        // Delete row
+        function deleteRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+        }
+
+        // Save bandplan
+        function saveBandplan() {
+            const bandplan = {};
+
+            // Collect data from all tables
+            document.querySelectorAll('.bandplan-table').forEach(table => {
+                const tableId = table.id;
+                const rows = table.querySelectorAll('tbody tr');
+                const tableData = [];
+
+                rows.forEach(row => {
+                    const inputs = row.querySelectorAll('input, select');
+                    const from = inputs[0].value;
+                    const to = inputs[1].value;
+                    const mode = inputs[2].value;
+
+                    if (from && to) {
+                        tableData.push({
+                            from: from,
+                            to: to,
+                            mode: mode
+                        });
+                    }
+                });
+
+                bandplan[tableId] = tableData;
+            });
+
+            // Save to localStorage
+            localStorage.setItem('dx-bandplan', JSON.stringify(bandplan));
+
+            // Show success message
+            showNotification('Bandplan saved successfully!', 'success');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type} fade-in`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+                <button class="notification-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Position notification
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '9999';
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
+
+            // Close button
+            notification.querySelector('.notification-close').addEventListener('click', () => {
+                notification.remove();
+            });
+        }
+
+        // Load bandplan on page load
+        document.addEventListener('DOMContentLoaded', loadBandplan);
+    </script>
+</body>
+</html>

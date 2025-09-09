@@ -319,10 +319,22 @@ body {
 
 .table th,
 .table td {
-  padding: var(--space-3) var(--space-4);
+  padding: 2px 4px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.75rem;
+  line-height: 1.1;
 }
+
+/* Specific column widths */
+.table th:nth-child(1), .table td:nth-child(1) { width: 72px; } /* Time - 20% wider */
+.table th:nth-child(2), .table td:nth-child(2) { width: 80px; } /* Callsign */
+.table th:nth-child(3), .table td:nth-child(3) { width: 80px; } /* Frequency - 15% wider */
+.table th:nth-child(4), .table td:nth-child(4) { width: 46px; } /* Band - 15% wider */
+.table th:nth-child(5), .table td:nth-child(5) { width: 58px; } /* Mode - 15% wider */
+.table th:nth-child(6), .table td:nth-child(6) { width: 80px; } /* Spotter */
+.table th:nth-child(7), .table td:nth-child(7) { min-width: 200px; } /* Comment */
 
 .table th {
   background: var(--bg-secondary);

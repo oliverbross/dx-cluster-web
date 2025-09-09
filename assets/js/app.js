@@ -326,9 +326,15 @@ class DXClusterApp {
     async connectToCluster() {
         const clusterSelect = document.getElementById('cluster-select');
         const clusterId = clusterSelect.value;
-        
+        const loginCallsign = document.getElementById('cluster-login').value.trim();
+
         if (!clusterId) {
             this.showNotification('Please select a cluster first', 'warning');
+            return;
+        }
+
+        if (!loginCallsign) {
+            this.showNotification('Please enter your callsign for login', 'warning');
             return;
         }
 
@@ -340,8 +346,9 @@ class DXClusterApp {
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const wsHost = window.location.hostname;
             const wsPort = 8080;
-            const wsUrl = `${protocol}://${wsHost}:${wsPort}/?cluster=${clusterId}`;
+            const wsUrl = `${protocol}://${wsHost}:${wsPort}/?cluster=${clusterId}&login=${encodeURIComponent(loginCallsign)}`;
             console.log('Connecting to WebSocket:', wsUrl);
+            console.log('Using login callsign:', loginCallsign);
             
             // Add debugging for connection issues
             console.log('Current page protocol:', window.location.protocol);
@@ -541,17 +548,232 @@ class DXClusterApp {
     }
 
     /**
+     * Handle cluster messages from WebSocket
+     */
+    handleClusterMessage(data) {
+        try {
+            const message = JSON.parse(data);
+            console.log('Received cluster message:', message);
+
+            switch (message.type) {
+                case 'spot':
+                    this.addSpot(message.data);
+                    break;
+                case 'terminal':
+                    this.addTerminalLine(message.data);
+                    break;
+                case 'status':
+                    this.addTerminalLine(message.data);
+                    break;
+                case 'error':
+                    this.showNotification(message.message, 'error');
+                    break;
+                default:
+                    console.log('Unknown message type:', message.type);
+            }
+        } catch (error) {
+            console.error('Error handling cluster message:', error);
+        }
+    }
+
+    /**
+     * Add a new spot to the collection
+     */
+    addSpot(spot) {
+        // Create unique key for the spot
+        const spotKey = `${spot.dxCall}-${spot.frequency}-${spot.time}`;
+
+        // Check if spot already exists (avoid duplicates)
+        if (this.spots.has(spotKey)) {
+            console.log('Spot already exists, skipping:', spotKey);
+            return;
+        }
+
+        // Add spot to collection
+        this.spots.set(spotKey, spot);
+        console.log('Added new spot:', spotKey, spot);
+
+        // Add to table immediately
+        this.addSpotToTable(spot);
+
+        // Update stats
+        this.updateStats();
+    }
+
+    /**
+     * Add spot to the HTML table
+     */
+    addSpotToTable(spot) {
+        const tbody = document.getElementById('spots-tbody');
+        if (!tbody) return;
+
+        const row = document.createElement('tr');
+        row.className = `spot-${spot.status || 'normal'}`;
+
+        // Determine status class
+        let statusClass = '';
+        if (spot.logbookStatus) {
+            if (spot.logbookStatus.confirmed) statusClass = 'spot-confirmed';
+            else if (spot.logbookStatus.worked) statusClass = 'spot-worked';
+            else if (spot.logbookStatus.newDxcc) statusClass = 'spot-new-dxcc';
+            else if (spot.logbookStatus.newBand) statusClass = 'spot-new-band';
+            else if (spot.logbookStatus.newMode) statusClass = 'spot-new-mode';
+        }
+
+        if (statusClass) {
+            row.classList.add(statusClass);
+        }
+
+        row.innerHTML = `
+            <td>${spot.time}</td>
+            <td>${spot.dxCall}</td>
+            <td>${spot.frequency}</td>
+            <td>${spot.band}</td>
+            <td>${spot.mode}</td>
+            <td>${spot.deCall}</td>
+            <td class="comment-cell">${spot.comment || ''}</td>
+        `;
+
+        // Insert at the top of the table (newest first)
+        if (tbody.firstChild) {
+            tbody.insertBefore(row, tbody.firstChild);
+        } else {
+            tbody.appendChild(row);
+        }
+    }
+
+    /**
+     * Refresh the spots table (used for filtering and sorting)
+     */
+    refreshSpotsTable() {
+        const tbody = document.getElementById('spots-tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        // Sort spots by timestamp (newest first)
+        const sortedSpots = Array.from(this.spots.values())
+            .sort((a, b) => b.timestamp - a.timestamp);
+
+        // Add each spot to the table
+        sortedSpots.forEach(spot => {
+            this.addSpotToTable(spot);
+        });
+    }
+
+    /**
+     * Send command to cluster
+     */
+    sendCommand(command) {
+        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+            this.showNotification('Not connected to cluster', 'warning');
+            return;
+        }
+
+        try {
+            this.websocket.send(JSON.stringify({
+                type: 'command',
+                data: command
+            }));
+            this.addTerminalLine(`> ${command}`);
+        } catch (error) {
+            console.error('Error sending command:', error);
+            this.showNotification('Failed to send command', 'error');
+        }
+    }
+
+    /**
+     * Add line to terminal
+     */
+    addTerminalLine(text) {
+        const terminalBody = document.getElementById('terminal-body');
+        if (!terminalBody) return;
+
+        const line = document.createElement('div');
+        line.className = 'terminal-line';
+        line.textContent = text;
+
+        terminalBody.appendChild(line);
+
+        // Auto-scroll to bottom
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    /**
+     * Filter spots based on current filters
+     */
+    filterSpots() {
+        const bandFilter = document.getElementById('band-filter').value;
+        const modeFilter = document.getElementById('mode-filter').value;
+
+        const rows = document.querySelectorAll('#spots-tbody tr');
+
+        rows.forEach(row => {
+            const band = row.cells[3].textContent;
+            const mode = row.cells[4].textContent;
+
+            const bandMatch = !bandFilter || band === bandFilter;
+            const modeMatch = !modeFilter || mode === modeFilter;
+
+            row.style.display = (bandMatch && modeMatch) ? '' : 'none';
+        });
+    }
+
+    /**
+     * Clear all spots
+     */
+    clearSpots() {
+        this.spots.clear();
+        const tbody = document.getElementById('spots-tbody');
+        if (tbody) {
+            tbody.innerHTML = '';
+        }
+        this.updateStats();
+        this.showNotification('All spots cleared', 'info');
+    }
+
+    /**
+     * Handle double-click on spot row
+     */
+    handleSpotDoubleClick(row) {
+        const cells = row.cells;
+        const spot = {
+            time: cells[0].textContent,
+            dxCall: cells[1].textContent,
+            frequency: cells[2].textContent,
+            band: cells[3].textContent,
+            mode: cells[4].textContent,
+            deCall: cells[5].textContent,
+            comment: cells[6].textContent
+        };
+
+        // Copy frequency to clipboard or focus on it
+        navigator.clipboard.writeText(spot.frequency).then(() => {
+            this.showNotification(`Copied ${spot.frequency} to clipboard`, 'success');
+        }).catch(() => {
+            // Fallback for browsers that don't support clipboard API
+            const input = document.createElement('input');
+            input.value = spot.frequency;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            this.showNotification(`Copied ${spot.frequency} to clipboard`, 'success');
+        });
+    }
+
+    /**
      * Clean old spots (older than 2 hours)
      */
     cleanOldSpots() {
         const cutoffTime = Date.now() - (2 * 60 * 60 * 1000); // 2 hours ago
-        
+
         for (const [key, spot] of this.spots.entries()) {
             if (spot.timestamp < cutoffTime) {
                 this.spots.delete(key);
             }
         }
-        
+
         this.refreshSpotsTable();
         this.updateStats();
     }

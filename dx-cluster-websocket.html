@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DX Cluster Web Client (WebSocket)</title>
+    <style>
+        * { box-sizing: border-box; }
+        
+        body { 
+            font-family: system-ui, sans-serif; 
+            margin: 0; 
+            background: #0b0d10; 
+            color: #e6edf3; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header { 
+            padding: 12px 16px; 
+            background: #11161c; 
+            border-bottom: 1px solid #1f2630; 
+            display: flex; 
+            gap: 8px; 
+            flex-wrap: wrap; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+        
+        input, button { 
+            padding: 8px 10px; 
+            border-radius: 8px; 
+            border: 1px solid #2b3440; 
+            background: #0f141a; 
+            color: #e6edf3; 
+        }
+        
+        button { 
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #1a2332;
+            border-color: #3d4954;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #status { 
+            margin-left: auto; 
+            font-size: 12px; 
+            opacity: 0.8; 
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #1a2332;
+        }
+        
+        #status.connected { background: #0f3d2f; color: #7ce083; }
+        #status.connecting { background: #3d2f0f; color: #e8c547; }
+        #status.disconnected { background: #3d0f0f; color: #f87171; }
+        
+        #terminal { 
+            padding: 12px 16px; 
+            flex: 1;
+            overflow-y: auto; 
+            white-space: pre-wrap; 
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; 
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        #sendbar { 
+            display: flex; 
+            gap: 8px; 
+            padding: 8px 16px; 
+            border-top: 1px solid #1f2630; 
+            background: #0d1218; 
+            flex-shrink: 0;
+        }
+        
+        #cmd { flex: 1; }
+        
+        .line { 
+            margin: 2px 0; 
+            word-wrap: break-word;
+        }
+        
+        .rx { color: #b3e5ff; }
+        .tx { color: #9be28f; font-weight: 500; }
+        .sys { color: #ffcf8e; font-weight: 500; }
+        .error { color: #f87171; font-weight: 500; }
+        .spot { color: #fbbf24; }
+        
+        /* DX Spot highlighting */
+        .line:contains("DX de") { background: rgba(251, 191, 36, 0.1); }
+        
+        .preset-commands {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .preset-btn {
+            font-size: 11px;
+            padding: 4px 8px;
+            background: #1a2332;
+            border-color: #2b3440;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <label>Host <input id="host" value="cluster.om0rx.com" placeholder="DX cluster hostname"></label>
+        <label>Port <input id="port" value="7300" size="6" placeholder="7300"></label>
+        <label>Login <input id="login" value="om0rx" placeholder="Your callsign"></label>
+        <button id="connect">Connect</button>
+        <button id="disconnect" disabled>Disconnect</button>
+        <div id="status" class="disconnected">Disconnected</div>
+    </header>
+
+    <div class="preset-commands">
+        <button class="preset-btn" onclick="sendCommand('sh/dx')">sh/dx</button>
+        <button class="preset-btn" onclick="sendCommand('sh/dx/10')">sh/dx/10</button>
+        <button class="preset-btn" onclick="sendCommand('sh/wwv')">sh/wwv</button>
+        <button class="preset-btn" onclick="sendCommand('sh/wcy')">sh/wcy</button>
+        <button class="preset-btn" onclick="sendCommand('sh/announce')">sh/announce</button>
+        <button class="preset-btn" onclick="sendCommand('help')">help</button>
+        <button class="preset-btn" onclick="clearTerminal()">Clear</button>
+    </div>
+
+    <div id="terminal"></div>
+
+    <div id="sendbar">
+        <input id="cmd" placeholder="Type a cluster command (e.g., sh/dx, sh/wwv, sh/announce) and press Enter" />
+        <button id="send" disabled>Send</button>
+    </div>
+
+<script>
+let ws = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 3;
+
+const term = document.getElementById('terminal');
+const status = document.getElementById('status');
+const hostEl = document.getElementById('host');
+const portEl = document.getElementById('port');
+const loginEl = document.getElementById('login');
+const connectBtn = document.getElementById('connect');
+const disconnectBtn = document.getElementById('disconnect');
+const sendBtn = document.getElementById('send');
+const cmdEl = document.getElementById('cmd');
+
+function appendLine(text, cls = "rx") {
+    const div = document.createElement('div');
+    div.className = 'line ' + cls;
+    div.textContent = text.replace(/\r/g, '');
+    term.appendChild(div);
+    
+    // Auto-scroll to bottom
+    term.scrollTop = term.scrollHeight;
+    
+    // Keep only last 1000 lines to prevent memory issues
+    while (term.children.length > 1000) {
+        term.removeChild(term.firstChild);
+    }
+}
+
+function setStatus(state, message = '') {
+    status.className = state;
+    status.textContent = message || state;
+    
+    const isConnected = (state === 'connected');
+    connectBtn.disabled = isConnected;
+    disconnectBtn.disabled = !isConnected;
+    sendBtn.disabled = !isConnected;
+    
+    // Enable/disable preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        if (btn.textContent !== 'Clear') {
+            btn.disabled = !isConnected;
+        }
+    });
+}
+
+function connect() {
+    const host = hostEl.value.trim();
+    const port = portEl.value.trim();
+    const login = loginEl.value.trim();
+    
+    if (!host || !port || !login) {
+        appendLine('❌ Please fill in all connection fields', 'error');
+        return;
+    }
+    
+    setStatus('connecting', 'Connecting...');
+    appendLine(`🔗 Connecting to ${host}:${port} as ${login}...`, 'sys');
+    
+    // Change this URL to match your WebSocket bridge server
+    const wsUrl = `ws://localhost:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
+    
+    try {
+        ws = new WebSocket(wsUrl);
+        
+        ws.addEventListener('open', () => {
+            setStatus('connected', `Connected to ${host}:${port}`);
+            appendLine(`✅ Connected to ${host}:${port} as ${login}`, 'sys');
+            reconnectAttempts = 0;
+            cmdEl.focus();
+        });
+        
+        ws.addEventListener('message', (ev) => {
+            const data = ev.data;
+            // Highlight DX spots
+            const isDxSpot = data.includes('DX de ');
+            appendLine(data, isDxSpot ? 'spot' : 'rx');
+        });
+        
+        ws.addEventListener('close', () => {
+            setStatus('disconnected', 'Disconnected');
+            appendLine('🔌 Connection closed', 'sys');
+            
+            // Auto-reconnect logic (optional)
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                appendLine(`🔄 Attempting reconnect ${reconnectAttempts}/${maxReconnectAttempts}...`, 'sys');
+                setTimeout(() => {
+                    if (ws && ws.readyState === WebSocket.CLOSED) {
+                        connect();
+                    }
+                }, 3000);
+            }
+        });
+        
+        ws.addEventListener('error', (e) => {
+            appendLine('❌ WebSocket error - check bridge server', 'error');
+            setStatus('disconnected', 'Connection error');
+        });
+        
+    } catch (error) {
+        appendLine(`❌ Connection error: ${error.message}`, 'error');
+        setStatus('disconnected', 'Connection error');
+    }
+}
+
+function disconnect() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        reconnectAttempts = maxReconnectAttempts; // Prevent auto-reconnect
+        ws.close();
+    }
+}
+
+function sendCommand(command) {
+    if (!command) {
+        command = cmdEl.value.trim();
+        cmdEl.value = '';
+    }
+    
+    if (!command || !ws || ws.readyState !== WebSocket.OPEN) return;
+    
+    ws.send(command);
+    appendLine(`> ${command}`, 'tx');
+    cmdEl.focus();
+}
+
+function clearTerminal() {
+    term.innerHTML = '';
+    appendLine('🧹 Terminal cleared', 'sys');
+}
+
+// Event listeners
+connectBtn.addEventListener('click', connect);
+disconnectBtn.addEventListener('click', disconnect);
+sendBtn.addEventListener('click', () => sendCommand());
+
+cmdEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendCommand();
+});
+
+// Auto-focus command input
+cmdEl.focus();
+
+// Initialize
+setStatus('disconnected', 'Ready to connect');
+appendLine('🌐 DX Cluster Web Client ready', 'sys');
+appendLine('💡 Start the WebSocket bridge first: node websocket-bridge.js', 'sys');
+appendLine('', 'sys');
+</script>
+</body>
+</html>

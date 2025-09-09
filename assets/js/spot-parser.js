@@ -6,6 +6,17 @@
  */
 
 class DXSpotParser {
+    // Static bandplan data for frequency to band/mode mapping
+    static bandplanData = {};
+    
+    /**
+     * Update bandplan data from user configuration
+     */
+    static updateBandplanData(bandplan) {
+        console.log('Updating bandplan data in DXSpotParser:', bandplan);
+        this.bandplanData = bandplan;
+    }
+    
     /**
      * Parse raw spot data into structured format
      */
@@ -108,6 +119,31 @@ class DXSpotParser {
      * Convert frequency to band
      */
     static frequencyToBand(frequency) {
+        // First check if we have bandplan data from user configuration
+        if (this.bandplanData && Object.keys(this.bandplanData).length > 0) {
+            // Convert frequency to kHz for comparison
+            const freqKHz = frequency;
+            
+            // Check each band in the bandplan
+            for (const bandId in this.bandplanData) {
+                if (this.bandplanData.hasOwnProperty(bandId)) {
+                    const bandRanges = this.bandplanData[bandId];
+                    
+                    // Check each frequency range in this band
+                    for (const range of bandRanges) {
+                        const from = parseFloat(range.from);
+                        const to = parseFloat(range.to);
+                        
+                        if (freqKHz >= from && freqKHz <= to) {
+                            // Extract band name from bandId (e.g., "band-160m" -> "160m")
+                            return bandId.replace('band-', '');
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fall back to default bands if no match in bandplan
         const bands = [
             { min: 1800, max: 2000, band: '160m' },
             { min: 3500, max: 4000, band: '80m' },
@@ -138,7 +174,7 @@ class DXSpotParser {
     static determineMode(comment, frequency) {
         const commentUpper = comment.toUpperCase();
         
-        // Check for explicit mode indicators
+        // Check for explicit mode indicators in comment (highest priority)
         if (commentUpper.includes('CW') || commentUpper.includes('QRS')) return 'CW';
         if (commentUpper.includes('SSB') || commentUpper.includes('PHONE')) return 'SSB';
         if (commentUpper.includes('FT8')) return 'FT8';
@@ -153,7 +189,32 @@ class DXSpotParser {
         if (commentUpper.includes('JS8')) return 'JS8';
         if (commentUpper.includes('WSPR')) return 'WSPR';
         
-        // Guess based on frequency (rough approximation)
+        // Check bandplan data for mode information
+        if (this.bandplanData && Object.keys(this.bandplanData).length > 0) {
+            // Convert frequency to kHz for comparison
+            const freqKHz = parseFloat(frequency);
+            
+            // Check each band in the bandplan
+            for (const bandId in this.bandplanData) {
+                if (this.bandplanData.hasOwnProperty(bandId)) {
+                    const bandRanges = this.bandplanData[bandId];
+                    
+                    // Check each frequency range in this band
+                    for (const range of bandRanges) {
+                        const from = parseFloat(range.from);
+                        const to = parseFloat(range.to);
+                        
+                        if (freqKHz >= from && freqKHz <= to) {
+                            // Return the mode from bandplan
+                            console.log(`Mode determined from bandplan: ${range.mode} for ${freqKHz} kHz`);
+                            return range.mode;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fall back to default mode determination based on frequency
         const freq = parseFloat(frequency);
         
         // CW portions of bands (simplified)
@@ -173,11 +234,11 @@ class DXSpotParser {
         if ((freq >= 14070 && freq <= 14095) ||
             (freq >= 21070 && freq <= 21110) ||
             (freq >= 28070 && freq <= 28120)) {
-            return 'DIGITAL';
+            return 'DIGI';
         }
         
         // Default to SSB for voice portions
-        return 'SSB';
+        return 'PHONE';
     }
     
     /**

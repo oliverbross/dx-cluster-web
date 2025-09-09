@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IARU Region 1 HF Bandplan - DX Cluster Web</title>
     <link rel="stylesheet" href="assets/css/styles.css">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .bandplan-container {
             max-width: 1200px;
@@ -83,12 +85,74 @@
             right: var(--space-4);
             z-index: 1000;
         }
+        
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .notification-success {
+            background-color: rgba(34, 197, 94, 0.2);
+            border-left: 4px solid var(--success);
+            color: var(--success);
+        }
+        
+        .notification-error {
+            background-color: rgba(220, 38, 38, 0.2);
+            border-left: 4px solid var(--error);
+            color: var(--error);
+        }
+        
+        .notification-warning {
+            background-color: rgba(245, 158, 11, 0.2);
+            border-left: 4px solid var(--warning);
+            color: var(--warning);
+        }
+        
+        .notification-info {
+            background-color: rgba(2, 132, 199, 0.2);
+            border-left: 4px solid var(--info);
+            color: var(--info);
+        }
+        
+        .notification-close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            margin-left: auto;
+            color: inherit;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <a href="index.html" class="navbar-brand">DX Cluster Web</a>
+            <a href="index.html" class="navbar-brand">
+                <i class="fas fa-satellite-dish"></i>
+                DX Cluster Web
+            </a>
             <ul class="navbar-nav">
                 <li><a href="index.html#dashboard" class="nav-link">Dashboard</a></li>
                 <li><a href="index.html#spots" class="nav-link">DX Spots</a></li>
@@ -488,141 +552,208 @@
     <script>
         // Load saved bandplan from localStorage
         function loadBandplan() {
-            const saved = localStorage.getItem('dx-bandplan');
-            if (saved) {
-                const bandplan = JSON.parse(saved);
-                // Apply saved values to form
-                Object.keys(bandplan).forEach(bandId => {
-                    const table = document.getElementById(bandId);
-                    if (table) {
-                        const tbody = table.querySelector('tbody');
-                        tbody.innerHTML = '';
+            try {
+                const saved = localStorage.getItem('dx-bandplan');
+                if (saved) {
+                    const bandplan = JSON.parse(saved);
+                    // Apply saved values to form
+                    Object.keys(bandplan).forEach(bandId => {
+                        const table = document.getElementById(bandId);
+                        if (table) {
+                            const tbody = table.querySelector('tbody');
+                            tbody.innerHTML = '';
 
-                        bandplan[bandId].forEach(row => {
-                            addRowToTable(bandId, row);
-                        });
-                    }
-                });
+                            bandplan[bandId].forEach(row => {
+                                addRowToTable(bandId, row);
+                            });
+                        }
+                    });
+                    showNotification('Bandplan loaded successfully', 'info');
+                } else {
+                    console.log('No saved bandplan found, using defaults');
+                    // Initialize with default values from the HTML
+                }
+            } catch (error) {
+                console.error('Error loading bandplan:', error);
+                showNotification('Error loading bandplan: ' + error.message, 'error');
             }
         }
 
         // Add row to table
         function addRow(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
+            try {
+                const table = document.getElementById(tableId);
+                if (!table) {
+                    console.error(`Table with ID ${tableId} not found`);
+                    return;
+                }
 
-            const tbody = table.querySelector('tbody');
-            const newRow = {
-                from: '',
-                to: '',
-                mode: 'CW'
-            };
+                const tbody = table.querySelector('tbody');
+                const newRow = {
+                    from: '',
+                    to: '',
+                    mode: 'CW'
+                };
 
-            addRowToTable(tableId, newRow);
+                addRowToTable(tableId, newRow);
+            } catch (error) {
+                console.error('Error adding row:', error);
+                showNotification('Error adding row: ' + error.message, 'error');
+            }
         }
 
         // Add row to table with data
         function addRowToTable(tableId, rowData) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
+            try {
+                const table = document.getElementById(tableId);
+                if (!table) {
+                    console.error(`Table with ID ${tableId} not found`);
+                    return;
+                }
 
-            const tbody = table.querySelector('tbody');
-            const row = document.createElement('tr');
+                const tbody = table.querySelector('tbody');
+                const row = document.createElement('tr');
 
-            row.innerHTML = `
-                <td><input type="number" class="frequency-input" value="${rowData.from}" step="100"></td>
-                <td><input type="number" class="frequency-input" value="${rowData.to}" step="100"></td>
-                <td>
-                    <select class="mode-select">
-                        <option value="CW" ${rowData.mode === 'CW' ? 'selected' : ''}>CW</option>
-                        <option value="DIGI" ${rowData.mode === 'DIGI' ? 'selected' : ''}>DIGI</option>
-                        <option value="PHONE" ${rowData.mode === 'PHONE' ? 'selected' : ''}>PHONE</option>
-                    </select>
-                </td>
-                <td class="action-buttons">
-                    <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
-                </td>
-            `;
+                row.innerHTML = `
+                    <td><input type="number" class="frequency-input" value="${rowData.from}" step="100"></td>
+                    <td><input type="number" class="frequency-input" value="${rowData.to}" step="100"></td>
+                    <td>
+                        <select class="mode-select">
+                            <option value="CW" ${rowData.mode === 'CW' ? 'selected' : ''}>CW</option>
+                            <option value="DIGI" ${rowData.mode === 'DIGI' ? 'selected' : ''}>DIGI</option>
+                            <option value="PHONE" ${rowData.mode === 'PHONE' ? 'selected' : ''}>PHONE</option>
+                        </select>
+                    </td>
+                    <td class="action-buttons">
+                        <button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button>
+                    </td>
+                `;
 
-            tbody.appendChild(row);
+                tbody.appendChild(row);
+            } catch (error) {
+                console.error('Error adding row to table:', error);
+                showNotification('Error adding row to table: ' + error.message, 'error');
+            }
         }
 
         // Delete row
         function deleteRow(button) {
-            const row = button.closest('tr');
-            row.remove();
+            try {
+                const row = button.closest('tr');
+                if (row) {
+                    row.remove();
+                }
+            } catch (error) {
+                console.error('Error deleting row:', error);
+                showNotification('Error deleting row: ' + error.message, 'error');
+            }
         }
 
         // Save bandplan
         function saveBandplan() {
-            const bandplan = {};
+            try {
+                const bandplan = {};
 
-            // Collect data from all tables
-            document.querySelectorAll('.bandplan-table').forEach(table => {
-                const tableId = table.id;
-                const rows = table.querySelectorAll('tbody tr');
-                const tableData = [];
+                // Collect data from all tables
+                document.querySelectorAll('.bandplan-table').forEach(table => {
+                    const tableId = table.id;
+                    const rows = table.querySelectorAll('tbody tr');
+                    const tableData = [];
 
-                rows.forEach(row => {
-                    const inputs = row.querySelectorAll('input, select');
-                    const from = inputs[0].value;
-                    const to = inputs[1].value;
-                    const mode = inputs[2].value;
+                    rows.forEach(row => {
+                        const inputs = row.querySelectorAll('input, select');
+                        const from = inputs[0].value;
+                        const to = inputs[1].value;
+                        const mode = inputs[2].value;
 
-                    if (from && to) {
-                        tableData.push({
-                            from: from,
-                            to: to,
-                            mode: mode
-                        });
-                    }
+                        if (from && to) {
+                            tableData.push({
+                                from: from,
+                                to: to,
+                                mode: mode
+                            });
+                        }
+                    });
+
+                    bandplan[tableId] = tableData;
                 });
 
-                bandplan[tableId] = tableData;
-            });
+                // Save to localStorage
+                localStorage.setItem('dx-bandplan', JSON.stringify(bandplan));
 
-            // Save to localStorage
-            localStorage.setItem('dx-bandplan', JSON.stringify(bandplan));
-
-            // Show success message
-            showNotification('Bandplan saved successfully!', 'success');
+                // Show success message
+                showNotification('Bandplan saved successfully!', 'success');
+                
+                // Sync with app if available
+                if (window.dxApp) {
+                    window.dxApp.updateBandplan(bandplan);
+                }
+            } catch (error) {
+                console.error('Error saving bandplan:', error);
+                showNotification('Error saving bandplan: ' + error.message, 'error');
+            }
         }
 
         // Show notification
         function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type} fade-in`;
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
-                <button class="notification-close">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
+            try {
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                
+                // Set icon based on notification type
+                let icon = 'info-circle';
+                if (type === 'success') icon = 'check-circle';
+                if (type === 'error') icon = 'exclamation-circle';
+                if (type === 'warning') icon = 'exclamation-triangle';
+                
+                notification.innerHTML = `
+                    <i class="fas fa-${icon}"></i>
+                    <span>${message}</span>
+                    <button class="notification-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
 
-            document.body.appendChild(notification);
+                document.body.appendChild(notification);
 
-            // Position notification
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.zIndex = '9999';
+                // Auto-remove after 3 seconds
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.classList.add('fade-out');
+                        setTimeout(() => notification.remove(), 300);
+                    }
+                }, 3000);
 
-            // Auto-remove after 3 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 3000);
-
-            // Close button
-            notification.querySelector('.notification-close').addEventListener('click', () => {
-                notification.remove();
-            });
+                // Close button
+                notification.querySelector('.notification-close').addEventListener('click', () => {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => notification.remove(), 300);
+                });
+            } catch (error) {
+                console.error('Error showing notification:', error);
+            }
         }
 
-        // Load bandplan on page load
-        document.addEventListener('DOMContentLoaded', loadBandplan);
+        // Apply theme from localStorage
+        function applyTheme() {
+            try {
+                const preferences = localStorage.getItem('dx-cluster-preferences');
+                if (preferences) {
+                    const prefs = JSON.parse(preferences);
+                    if (prefs.theme) {
+                        document.documentElement.setAttribute('data-theme', prefs.theme);
+                    }
+                }
+            } catch (error) {
+                console.error('Error applying theme:', error);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme();
+            loadBandplan();
+        });
     </script>
 </body>
 </html>

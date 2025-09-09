@@ -559,21 +559,40 @@ async function handleClusterConnect(ws, data) {
         // Add connection timeout
         const connectionTimeout = setTimeout(() => {
             console.error(`⏰ Connection timeout for ${host}:${port}`);
-            clusterSocket.destroy();
-            ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Connection timeout'
-            }));
-        }, 10000);
+            try {
+                clusterSocket.destroy();
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Connection timeout - cluster server did not respond'
+                }));
+            } catch (error) {
+                console.error('Error handling connection timeout:', error);
+            }
+        }, 15000); // Increased timeout to 15 seconds
 
         clusterSocket.connect(port, host, () => {
             console.log(`✅ Connected to DX cluster: ${host}:${port}`);
             clearTimeout(connectionTimeout);
+            
+            // Reset reconnect attempts counter on successful connection
+            ws.reconnectAttempts = 0;
+            
+            // Clear any pending reconnect timer
+            if (ws.reconnectTimer) {
+                clearTimeout(ws.reconnectTimer);
+                ws.reconnectTimer = null;
+            }
 
-            ws.send(JSON.stringify({
-                type: 'status',
-                data: `Connected to ${name} (${host}:${port})`
-            }));
+            try {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'status',
+                        data: `Connected to ${name} (${host}:${port})`
+                    }));
+                }
+            } catch (error) {
+                console.error('Error sending connection status:', error);
+            }
 
             // Send initial commands (removed problematic commands)
             // Commands will be sent after successful login
@@ -622,38 +641,97 @@ async function handleClusterConnect(ws, data) {
         clusterSocket.on('close', () => {
             console.log(`❌ DX cluster connection closed: ${host}:${port}`);
             try {
-                ws.send(JSON.stringify({
-                    type: 'status',
-                    data: `Disconnected from ${name} (${host}:${port})`
-                }));
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'status',
+                        data: `Disconnected from ${name} (${host}:${port})`
+                    }));
+                }
             } catch (sendError) {
                 console.error('Error sending disconnect message:', sendError);
             }
             ws.clusterConnection = null;
 
-            // Attempt to reconnect after 30 seconds
-            console.log(`🔄 Scheduling reconnection to ${host}:${port} in 30 seconds...`);
-            setTimeout(() => {
+            // Implement exponential backoff for reconnection attempts
+            // Start with 5 seconds, then 10, 20, 40, max 60 seconds
+            const reconnectDelay = Math.min(
+                60000, // Max 60 seconds
+                5000 * Math.pow(2, ws.reconnectAttempts || 0)
+            );
+            
+            // Increment reconnect attempts counter
+            ws.reconnectAttempts = (ws.reconnectAttempts || 0) + 1;
+            
+            // Attempt to reconnect after delay
+            console.log(`🔄 Scheduling reconnection to ${host}:${port} in ${reconnectDelay/1000} seconds (attempt ${ws.reconnectAttempts})...`);
+            
+            // Clear any existing reconnect timer
+            if (ws.reconnectTimer) {
+                clearTimeout(ws.reconnectTimer);
+            }
+            
+            ws.reconnectTimer = setTimeout(() => {
                 if (!ws.clusterConnection && ws.readyState === WebSocket.OPEN) {
-                    console.log(`🔄 Attempting to reconnect to ${host}:${port}...`);
+                    console.log(`🔄 Attempting to reconnect to ${host}:${port} (attempt ${ws.reconnectAttempts})...`);
+                    
+                    try {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'status',
+                                data: `Attempting to reconnect to ${name}...`
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('Error sending reconnect status:', error);
+                    }
+                    
                     handleClusterConnect(ws, { clusterId: clusterId }).catch(error => {
                         console.error('Reconnection failed:', error);
+                        
+                        try {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({
+                                    type: 'error',
+                                    message: `Reconnection failed: ${error.message}`
+                                }));
+                            }
+                        } catch (sendError) {
+                            console.error('Error sending reconnection error:', sendError);
+                        }
                     });
+                } else {
+                    console.log('Skipping reconnection attempt - connection already established or WebSocket closed');
+                    ws.reconnectAttempts = 0; // Reset counter
                 }
-            }, 30000);
+            }, reconnectDelay);
         });
 
         clusterSocket.on('error', (error) => {
             console.error(`❌ DX cluster connection error: ${error.message}`);
             clearTimeout(connectionTimeout);
+            
+            // Determine a more user-friendly error message
+            let errorMessage = `Connection failed: ${error.message}`;
+            
+            if (error.code === 'ECONNREFUSED') {
+                errorMessage = `Connection refused by ${host}:${port}. The cluster server may be down or not accepting connections.`;
+            } else if (error.code === 'ETIMEDOUT') {
+                errorMessage = `Connection to ${host}:${port} timed out. The cluster server may be unreachable.`;
+            } else if (error.code === 'ENOTFOUND') {
+                errorMessage = `Host ${host} not found. Please check the cluster address.`;
+            }
+            
             try {
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    message: `Connection failed: ${error.message}`
-                }));
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: errorMessage
+                    }));
+                }
             } catch (sendError) {
                 console.error('Error sending error message:', sendError);
             }
+            
             ws.clusterConnection = null;
         });
 

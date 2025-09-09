@@ -44,6 +44,8 @@ Object.assign(DXClusterApp.prototype, {
      */
     async processSpot(spotData) {
         try {
+            console.log('Processing spot:', spotData);
+            
             // Check if spotData is already parsed (object) or needs parsing (string)
             let spot;
             if (typeof spotData === 'object' && spotData.dxCall && spotData.frequency) {
@@ -56,36 +58,56 @@ Object.assign(DXClusterApp.prototype, {
                     comment: spotData.comment,
                     band: spotData.band,
                     mode: spotData.mode,
-                    timestamp: spotData.timestamp
+                    timestamp: spotData.timestamp || Date.now()
                 };
+                console.log('Using pre-parsed spot data:', spot);
             } else {
                 // Raw text data that needs parsing
+                console.log('Parsing raw spot data:', spotData);
                 spot = this.parseSpotData(spotData);
             }
-            if (!spot) return;
+            
+            if (!spot) {
+                console.warn('Failed to parse spot data');
+                return;
+            }
 
             // Generate unique key for spot
             const spotKey = `${spot.callsign}-${spot.band}-${spot.mode}`;
+            console.log('Generated spot key:', spotKey);
             
             // Check if we already have this spot (within time window)
             const existingSpot = this.spots.get(spotKey);
             if (existingSpot && (Date.now() - existingSpot.timestamp) < 300000) { // 5 minutes
+                console.log('Skipping duplicate spot (within 5 minutes)');
                 return; // Skip duplicate
             }
 
             // Check logbook status if Wavelog is configured
             if (this.preferences.wavelogApiKey) {
-                spot.logbookStatus = await this.checkLogbookStatus(spot);
+                console.log('Checking logbook status for spot');
+                try {
+                    spot.logbookStatus = await this.checkLogbookStatus(spot);
+                } catch (logbookError) {
+                    console.error('Error checking logbook status:', logbookError);
+                    spot.logbookStatus = null;
+                }
+            } else {
+                console.log('Wavelog not configured, skipping logbook check');
             }
 
             // Determine spot status and color
             spot.status = this.determineSpotStatus(spot);
+            console.log('Determined spot status:', spot.status);
             
-            // Add timestamp
-            spot.timestamp = Date.now();
+            // Add timestamp if not already present
+            if (!spot.timestamp) {
+                spot.timestamp = Date.now();
+            }
             
             // Store spot
             this.spots.set(spotKey, spot);
+            console.log('Stored spot in spots Map, total spots:', this.spots.size);
             
             // Add to table
             this.addSpotToTable(spot);
@@ -138,50 +160,106 @@ Object.assign(DXClusterApp.prototype, {
      * Add spot to the display table
      */
     addSpotToTable(spot) {
-        const tbody = document.getElementById('spots-tbody');
-        
-        // Remove "no spots" message if present
-        if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
-            tbody.innerHTML = '';
+        try {
+            console.log('Adding spot to table:', spot.callsign, spot.frequency);
+            
+            const tbody = document.getElementById('spots-tbody');
+            if (!tbody) {
+                console.error('Spots table body not found');
+                return;
+            }
+            
+            // Remove "no spots" message if present
+            if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
+                const firstChild = tbody.children[0];
+                if (firstChild.textContent.includes('No spots received yet')) {
+                    tbody.innerHTML = '';
+                }
+            }
+
+            // Check if this spot is already in the table
+            const spotKey = `${spot.callsign}-${spot.band}-${spot.mode}`;
+            const existingRow = tbody.querySelector(`tr[data-spot-key="${spotKey}"]`);
+            
+            if (existingRow) {
+                console.log('Spot already in table, updating:', spotKey);
+                // Update existing row instead of creating a new one
+                existingRow.className = `spot-${spot.status}`;
+                
+                // Format time
+                const timeFormatted = this.formatSpotTime(spot.time);
+                
+                // Create status indicator
+                const statusText = this.getStatusText(spot.status);
+                
+                // Update row content
+                const cells = existingRow.querySelectorAll('td');
+                if (cells.length >= 8) {
+                    cells[0].textContent = timeFormatted;
+                    cells[1].textContent = spot.callsign;
+                    cells[2].textContent = spot.frequency.toFixed(1);
+                    cells[3].textContent = spot.band;
+                    cells[4].textContent = spot.mode;
+                    cells[5].textContent = spot.spotter;
+                    cells[6].textContent = spot.comment;
+                    cells[7].innerHTML = `
+                        <span class="status-indicator status-${spot.status.replace('-', '')}">
+                            ${statusText}
+                        </span>
+                    `;
+                }
+                
+                // Move to top if not already there
+                if (tbody.firstChild !== existingRow) {
+                    tbody.insertBefore(existingRow, tbody.firstChild);
+                }
+            } else {
+                console.log('Creating new row for spot:', spotKey);
+                // Create new row
+                const row = document.createElement('tr');
+                row.className = `spot-${spot.status}`;
+                row.dataset.spotKey = spotKey;
+                
+                // Format time
+                const timeFormatted = this.formatSpotTime(spot.time);
+                
+                // Create status indicator
+                const statusText = this.getStatusText(spot.status);
+                
+                // Set row content
+                row.innerHTML = `
+                    <td class="font-mono text-sm">${timeFormatted}</td>
+                    <td class="font-mono font-bold">${spot.callsign}</td>
+                    <td class="font-mono">${spot.frequency.toFixed(1)}</td>
+                    <td class="font-bold">${spot.band}</td>
+                    <td>${spot.mode}</td>
+                    <td class="font-mono">${spot.spotter}</td>
+                    <td class="text-sm">${spot.comment || ''}</td>
+                    <td>
+                        <span class="status-indicator status-${spot.status.replace('-', '')}">
+                            ${statusText}
+                        </span>
+                    </td>
+                `;
+
+                // Insert at top of table
+                tbody.insertBefore(row, tbody.firstChild);
+            }
+
+            // Limit table size
+            const maxRows = 500;
+            while (tbody.children.length > maxRows) {
+                tbody.removeChild(tbody.lastChild);
+            }
+
+            // Apply current filters
+            const row = tbody.querySelector(`tr[data-spot-key="${spotKey}"]`);
+            if (row) {
+                this.applyFiltersToRow(row);
+            }
+        } catch (error) {
+            console.error('Error adding spot to table:', error);
         }
-
-        // Create row
-        const row = document.createElement('tr');
-        row.className = `spot-${spot.status}`;
-        row.dataset.spotKey = `${spot.callsign}-${spot.band}-${spot.mode}`;
-        
-        // Format time
-        const timeFormatted = this.formatSpotTime(spot.time);
-        
-        // Create status indicator
-        const statusText = this.getStatusText(spot.status);
-        
-        row.innerHTML = `
-            <td class="font-mono text-sm">${timeFormatted}</td>
-            <td class="font-mono font-bold">${spot.callsign}</td>
-            <td class="font-mono">${spot.frequency.toFixed(1)}</td>
-            <td class="font-bold">${spot.band}</td>
-            <td>${spot.mode}</td>
-            <td class="font-mono">${spot.spotter}</td>
-            <td class="text-sm">${spot.comment}</td>
-            <td>
-                <span class="status-indicator status-${spot.status.replace('-', '')}">
-                    ${statusText}
-                </span>
-            </td>
-        `;
-
-        // Insert at top of table
-        tbody.insertBefore(row, tbody.firstChild);
-
-        // Limit table size
-        const maxRows = 500;
-        while (tbody.children.length > maxRows) {
-            tbody.removeChild(tbody.lastChild);
-        }
-
-        // Apply current filters
-        this.applyFiltersToRow(row);
     },
 
     /**

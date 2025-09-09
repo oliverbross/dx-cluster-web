@@ -297,10 +297,89 @@ class DXClusterApp {
      */
     async loadClusters() {
         try {
-            const response = await fetch('api/clusters.php');
-            const clusters = await response.json();
+            console.log('Loading DX clusters...');
+            
+            // Try both endpoints for compatibility
+            let clusters = [];
+            let response;
+            
+            try {
+                // First try the PHP endpoint
+                response = await fetch('api/clusters.php');
+                if (response.ok) {
+                    clusters = await response.json();
+                    console.log('Loaded clusters from PHP endpoint:', clusters);
+                }
+            } catch (phpError) {
+                console.warn('Failed to load clusters from PHP endpoint:', phpError);
+            }
+            
+            // If PHP endpoint failed or returned empty, try the direct endpoint
+            if (!clusters || clusters.length === 0) {
+                try {
+                    response = await fetch('api/clusters');
+                    if (response.ok) {
+                        clusters = await response.json();
+                        console.log('Loaded clusters from direct endpoint:', clusters);
+                    }
+                } catch (directError) {
+                    console.warn('Failed to load clusters from direct endpoint:', directError);
+                }
+            }
+            
+            // If both endpoints failed, use hardcoded defaults
+            if (!clusters || clusters.length === 0) {
+                console.warn('No clusters loaded from server, using defaults');
+                clusters = [
+                    {
+                        id: 1,
+                        name: "DX Summit",
+                        host: "dxc.dxsummit.fi",
+                        port: 8000,
+                        description: "Popular DX cluster with web interface",
+                        is_active: 1
+                    },
+                    {
+                        id: 2,
+                        name: "OH2AQ",
+                        host: "oh2aq.kolumbus.fi",
+                        port: 41112,
+                        description: "Finnish DX cluster",
+                        is_active: 1
+                    },
+                    {
+                        id: 3,
+                        name: "VE7CC",
+                        host: "ve7cc.net",
+                        port: 23,
+                        description: "Canadian DX cluster",
+                        is_active: 1
+                    },
+                    {
+                        id: 4,
+                        name: "W3LPL",
+                        host: "w3lpl.net",
+                        port: 7300,
+                        description: "US East Coast DX cluster",
+                        is_active: 1
+                    },
+                    {
+                        id: 5,
+                        name: "OM0RX Cluster",
+                        host: "cluster.om0rx.com",
+                        port: 7300,
+                        description: "OM0RX Personal DX Cluster",
+                        is_active: 1
+                    }
+                ];
+            }
             
             const select = document.getElementById('cluster-select');
+            if (!select) {
+                console.error('Cluster select element not found');
+                return;
+            }
+            
             select.innerHTML = '<option value="">Select a cluster...</option>';
             
             clusters.forEach(cluster => {
@@ -314,6 +393,8 @@ class DXClusterApp {
             if (this.preferences.defaultCluster) {
                 select.value = this.preferences.defaultCluster;
             }
+            
+            console.log('Clusters loaded successfully:', clusters.length);
         } catch (error) {
             console.error('Failed to load clusters:', error);
             this.showNotification('Failed to load cluster list', 'error');
@@ -344,64 +425,144 @@ class DXClusterApp {
             // Initialize WebSocket connection
             // Use secure WebSocket if page is loaded over HTTPS, otherwise use insecure
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsHost = window.location.hostname;
-            const wsPort = 8080;
-            const wsUrl = `${protocol}://${wsHost}:${wsPort}/?cluster=${clusterId}&login=${encodeURIComponent(loginCallsign)}`;
+            
+            // Determine WebSocket host and port
+            let wsHost = window.location.hostname;
+            let wsPort = 8080; // Default port
+            
+            // Check if we're running on localhost or a development environment
+            if (wsHost === 'localhost' || wsHost === '127.0.0.1' || wsHost.includes('192.168.')) {
+                // Use the same port as the page for development
+                wsPort = window.location.port || (protocol === 'wss' ? 443 : 80);
+            } else if (window.location.port) {
+                // If we're on a non-standard port, use that port
+                wsPort = window.location.port;
+            }
+            
+            // Build WebSocket URL
+            const wsUrl = `${protocol}://${wsHost}${wsPort ? ':' + wsPort : ''}/?cluster=${clusterId}&login=${encodeURIComponent(loginCallsign)}`;
             console.log('Connecting to WebSocket:', wsUrl);
             console.log('Using login callsign:', loginCallsign);
             
             // Add debugging for connection issues
             console.log('Current page protocol:', window.location.protocol);
             console.log('Current page hostname:', window.location.hostname);
+            console.log('Current page port:', window.location.port);
             console.log('WebSocket host will be:', wsHost);
             console.log('WebSocket port will be:', wsPort);
             
             this.websocket = new WebSocket(wsUrl);
             
             this.websocket.onopen = () => {
+                console.log('WebSocket connection established');
                 this.isConnected = true;
                 this.currentCluster = clusterId;
                 this.updateConnectionStatus('connected');
                 this.addTerminalLine('Connected to cluster successfully');
                 
                 // Enable terminal input
-                document.getElementById('terminal-input').disabled = false;
+                const terminalInput = document.getElementById('terminal-input');
+                if (terminalInput) {
+                    terminalInput.disabled = false;
+                    terminalInput.focus();
+                }
                 
                 // Update buttons
-                document.getElementById('connect-btn').disabled = true;
-                document.getElementById('disconnect-btn').disabled = false;
+                const connectBtn = document.getElementById('connect-btn');
+                const disconnectBtn = document.getElementById('disconnect-btn');
+                if (connectBtn) connectBtn.disabled = true;
+                if (disconnectBtn) disconnectBtn.disabled = false;
+                
+                // Save as default cluster if option is checked
+                const saveDefaultCheckbox = document.getElementById('save-default-cluster');
+                if (saveDefaultCheckbox && saveDefaultCheckbox.checked) {
+                    this.preferences.defaultCluster = clusterId;
+                    this.savePreferences();
+                }
+                
+                // Reset reconnection attempts counter
+                this.reconnectAttempts = 0;
+                
+                // Clear any pending reconnect timer
+                if (this.reconnectTimer) {
+                    clearTimeout(this.reconnectTimer);
+                    this.reconnectTimer = null;
+                }
             };
             
             this.websocket.onmessage = (event) => {
                 this.handleClusterMessage(event.data);
             };
             
-            this.websocket.onclose = () => {
+            this.websocket.onclose = (event) => {
+                console.log('WebSocket connection closed:', event);
                 this.handleDisconnection();
+                
+                // Only attempt to reconnect if this wasn't a clean close
+                // Code 1000 is normal closure, 1001 is going away (page close/refresh)
+                if (event.code !== 1000 && event.code !== 1001) {
+                    console.log('Connection closed unexpectedly, scheduling reconnection');
+                    this.scheduleReconnection(clusterId, loginCallsign);
+                } else {
+                    console.log('Clean connection close, not reconnecting');
+                }
             };
             
             this.websocket.onerror = (error) => {
                 console.error('WebSocket error:', error);
                 console.error('WebSocket error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-                this.showNotification('Connection failed: ' + (error.message || 'Unknown error'), 'error');
+                
+                // Provide more helpful error messages
+                let errorMessage = 'Connection failed';
+                
+                if (error.message) {
+                    errorMessage += ': ' + error.message;
+                } else if (this.websocket.readyState === WebSocket.CLOSED) {
+                    errorMessage += ': Connection closed unexpectedly';
+                } else if (this.websocket.readyState === WebSocket.CONNECTING) {
+                    errorMessage += ': Unable to establish connection';
+                } else {
+                    errorMessage += ': Unknown error';
+                }
+                
+                // Add debugging info
+                console.error('WebSocket readyState:', this.websocket.readyState);
+                console.error('WebSocket URL:', wsUrl);
+                
+                this.showNotification(errorMessage, 'error');
                 this.handleDisconnection();
+                
+                // Schedule reconnection attempt with exponential backoff
+                this.scheduleReconnection(clusterId, loginCallsign);
             };
             
             // Add timeout for connection
-            setTimeout(() => {
+            const connectionTimeout = setTimeout(() => {
                 if (this.websocket && this.websocket.readyState === WebSocket.CONNECTING) {
                     console.error('WebSocket connection timeout');
                     console.error('WebSocket readyState:', this.websocket.readyState);
                     console.error('WebSocket URL:', wsUrl);
-                    this.showNotification('Connection timeout', 'error');
+                    
+                    this.showNotification('Connection timeout - server not responding', 'error');
                     this.handleDisconnection();
+                    
+                    // Schedule reconnection attempt
+                    this.scheduleReconnection(clusterId, loginCallsign);
                 }
-            }, 10000); // 10 second timeout
+            }, 15000); // 15 second timeout
+            
+            // Clear timeout when connection is established
+            this.websocket.addEventListener('open', () => {
+                clearTimeout(connectionTimeout);
+            });
             
         } catch (error) {
             console.error('Connection error:', error);
-            this.showNotification('Failed to connect to cluster', 'error');
+            this.showNotification('Failed to connect to cluster: ' + error.message, 'error');
             this.handleDisconnection();
+            
+            // Schedule reconnection attempt
+            this.scheduleReconnection(clusterId, loginCallsign);
         }
     }
 
@@ -427,11 +588,69 @@ class DXClusterApp {
         this.addTerminalLine('Disconnected from cluster');
         
         // Disable terminal input
-        document.getElementById('terminal-input').disabled = true;
+        const terminalInput = document.getElementById('terminal-input');
+        if (terminalInput) {
+            terminalInput.disabled = true;
+        }
         
         // Update buttons
-        document.getElementById('connect-btn').disabled = false;
-        document.getElementById('disconnect-btn').disabled = true;
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        if (connectBtn) connectBtn.disabled = false;
+        if (disconnectBtn) disconnectBtn.disabled = true;
+    }
+    
+    /**
+     * Schedule reconnection attempt with exponential backoff
+     */
+    scheduleReconnection(clusterId, loginCallsign) {
+        // Initialize reconnect attempts counter if not exists
+        if (typeof this.reconnectAttempts === 'undefined') {
+            this.reconnectAttempts = 0;
+        }
+        
+        // Increment reconnect attempts counter
+        this.reconnectAttempts++;
+        
+        // Calculate delay with exponential backoff (5s, 10s, 20s, 40s, max 60s)
+        const reconnectDelay = Math.min(
+            60000, // Max 60 seconds
+            5000 * Math.pow(2, this.reconnectAttempts - 1)
+        );
+        
+        console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${reconnectDelay/1000} seconds`);
+        
+        // Clear any existing reconnect timer
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+        }
+        
+        // Set reconnect timer
+        this.reconnectTimer = setTimeout(() => {
+            // Only attempt reconnection if not already connected
+            if (!this.isConnected) {
+                console.log(`Attempting reconnection ${this.reconnectAttempts} to cluster ${clusterId}`);
+                this.addTerminalLine(`Attempting to reconnect (attempt ${this.reconnectAttempts})...`);
+                
+                // Get current values from form
+                const clusterSelect = document.getElementById('cluster-select');
+                const loginInput = document.getElementById('cluster-login');
+                
+                // Use provided values or form values
+                const clusterIdToUse = clusterId || (clusterSelect ? clusterSelect.value : null);
+                const loginCallsignToUse = loginCallsign || (loginInput ? loginInput.value : null);
+                
+                if (clusterIdToUse && loginCallsignToUse) {
+                    this.connectToCluster();
+                } else {
+                    console.error('Missing cluster ID or login callsign for reconnection');
+                    this.showNotification('Cannot reconnect: missing cluster or callsign', 'error');
+                }
+            } else {
+                console.log('Already connected, skipping reconnection attempt');
+                this.reconnectAttempts = 0;
+            }
+        }, reconnectDelay);
     }
 
     /**
@@ -474,11 +693,56 @@ class DXClusterApp {
         // Initialize stats
         this.updateStats();
         
+        // Load bandplan
+        this.loadBandplan();
+        
         // Setup periodic updates
         setInterval(() => {
             this.updateStats();
             this.cleanOldSpots();
         }, 30000); // Update every 30 seconds
+        
+        // Make app instance available globally for external pages
+        window.dxApp = this;
+    }
+    
+    /**
+     * Load bandplan from localStorage
+     */
+    loadBandplan() {
+        try {
+            const saved = localStorage.getItem('dx-bandplan');
+            if (saved) {
+                this.bandplan = JSON.parse(saved);
+                console.log('Loaded bandplan from localStorage:', this.bandplan);
+            } else {
+                console.log('No saved bandplan found');
+                this.bandplan = {};
+            }
+        } catch (error) {
+            console.error('Error loading bandplan:', error);
+            this.bandplan = {};
+        }
+    }
+    
+    /**
+     * Update bandplan (called from bandplan.html)
+     */
+    updateBandplan(bandplan) {
+        try {
+            console.log('Updating bandplan:', bandplan);
+            this.bandplan = bandplan;
+            
+            // Update frequency to band/mode mapping
+            if (typeof DXSpotParser !== 'undefined') {
+                DXSpotParser.updateBandplanData(bandplan);
+            }
+            
+            this.showNotification('Bandplan updated successfully', 'success');
+        } catch (error) {
+            console.error('Error updating bandplan:', error);
+            this.showNotification('Error updating bandplan: ' + error.message, 'error');
+        }
     }
 
     /**

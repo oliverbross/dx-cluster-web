@@ -72,7 +72,7 @@ class ClustersAPI {
                 }
             }
             
-            // Fallback to hardcoded clusters if database is not available
+            // Use hardcoded clusters if database is not available
             $clusters = $this->getDefaultClusters();
             echo json_encode([
                 'success' => true,
@@ -82,9 +82,12 @@ class ClustersAPI {
         } catch (Exception $e) {
             error_log("Clusters API error: " . $e->getMessage());
             
-            // Return default clusters as fallback
+            // Return default clusters with proper format
             $clusters = $this->getDefaultClusters();
-            echo json_encode($clusters);
+            echo json_encode([
+                'success' => true,
+                'clusters' => $clusters
+            ]);
         }
     }
     

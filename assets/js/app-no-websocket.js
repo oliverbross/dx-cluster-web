@@ -115,16 +115,18 @@ class DXClusterApp {
             }
             
             if (result.success && result.clusters) {
-                console.log('✅ Using clusters from API response:', result.clusters.length, 'clusters');
+                console.log('✅ Using clusters from API response (wrapped):', result.clusters.length, 'clusters');
                 this.populateClusterSelect(result.clusters);
+            } else if (Array.isArray(result)) {
+                console.log('✅ Using clusters from API response (direct array):', result.length, 'clusters');
+                this.populateClusterSelect(result);
             } else {
-                console.warn('⚠️ Failed to load clusters, using fallback. Result:', result);
-                this.populateClusterSelect(this.getFallbackClusters());
+                console.error('❌ Invalid clusters response format:', result);
+                throw new Error('Invalid response format');
             }
         } catch (error) {
             console.error('❌ Error loading clusters:', error);
-            console.log('🔄 Using fallback clusters');
-            this.populateClusterSelect(this.getFallbackClusters());
+            alert('Failed to load DX clusters. Please check your internet connection and try again.');
         }
     }
     
@@ -147,15 +149,7 @@ class DXClusterApp {
         }
     }
     
-    getFallbackClusters() {
-        return [
-            {id: 1, name: 'DX Summit', host: 'dxc.dxsummit.fi', port: 8000},
-            {id: 2, name: 'OH2AQ', host: 'oh2aq.kolumbus.fi', port: 41112},
-            {id: 3, name: 'VE7CC', host: 've7cc.net', port: 23},
-            {id: 4, name: 'W3LPL', host: 'w3lpl.net', port: 7300},
-            {id: 5, name: 'K3LR', host: 'k3lr.com', port: 7300}
-        ];
-    }
+
     
     async connectToCluster(clusterId, loginCallsign) {
         if (this.isConnected) {

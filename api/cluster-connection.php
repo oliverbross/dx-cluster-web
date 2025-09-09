@@ -30,7 +30,7 @@ switch ($action) {
         pollForUpdates();
         break;
     case 'status':
-        getConnectionStatus();
+        getConnectionStatusAPI();
         break;
     default:
         jsonResponse(['error' => 'Invalid action'], 400);
@@ -59,9 +59,12 @@ function connectToCluster() {
         $cluster = $stmt->fetch();
         
         if (!$cluster) {
+            error_log("❌ ConnectToCluster: Cluster not found for ID: {$clusterId}");
             jsonResponse(['error' => 'Cluster not found'], 404);
             return;
         }
+        
+        error_log("✅ ConnectToCluster: Found cluster: " . $cluster['name'] . " (" . $cluster['host'] . ":" . $cluster['port'] . ")");
         
         // Start background connection (simplified approach)
         $connectionId = startClusterConnection($cluster, $loginCallsign);
@@ -147,13 +150,14 @@ function pollForUpdates() {
 }
 
 function getConnectionStatus($connectionId = null) {
-    // For now, return mock status
-    // In a real implementation, check actual connection status
+    // TODO: Implement real connection status check
+    // For now, return basic status - no hardcoded values
     return [
-        'connected' => true,
-        'cluster_name' => 'DX Summit',
-        'login_callsign' => 'OM0RX',
-        'connected_since' => time() - 3600
+        'connected' => false,
+        'cluster_name' => null,
+        'login_callsign' => null,
+        'connected_since' => null,
+        'message' => 'Real connection status not implemented yet'
     ];
 }
 
@@ -161,13 +165,12 @@ function startClusterConnection($cluster, $loginCallsign) {
     // Generate a unique connection ID
     $connectionId = uniqid('conn_' . $cluster['id'] . '_');
     
-    // In a real implementation, you would:
+    // TODO: Implement real cluster connection
     // 1. Open a socket connection to the cluster
     // 2. Store the connection details in the database
     // 3. Start a background process to maintain the connection
     
-    // For now, we'll simulate this and add some demo data
-    addDemoSpots($cluster['id']);
+    // No demo data - real connections only
     
     return $connectionId;
 }
@@ -206,13 +209,7 @@ function getNewSpots($lastUpdate) {
         $stmt->execute([$lastUpdate]);
         $spots = $stmt->fetchAll();
         
-        // If no new spots, return some demo data occasionally
-        if (empty($spots) && rand(1, 10) == 1) {
-            addDemoSpots();
-            // Try again
-            $stmt->execute([$lastUpdate]);
-            $spots = $stmt->fetchAll();
-        }
+        // Return only real spots, no demo data
         
         return $spots;
         
@@ -222,33 +219,16 @@ function getNewSpots($lastUpdate) {
     }
 }
 
-function addDemoSpots($clusterId = 1) {
-    try {
-        $db = getDatabase();
-        
-        $demoSpots = [
-            ['JA1ABC', 14.205, 'OM0RX', 'CQ DX', '20m', 'CW'],
-            ['VK2XYZ', 21.025, 'OM0RX', '599 QSL', '15m', 'CW'],
-            ['W6DEF', 7.032, 'OM0RX', 'UP 2', '40m', 'CW'],
-            ['ZL1GHI', 28.015, 'OM0RX', 'CQ', '10m', 'CW'],
-            ['DL9JKL', 14.015, 'OM0RX', 'QRT 5', '20m', 'CW']
-        ];
-        
-        $stmt = $db->prepare("
-            INSERT INTO dx_spots 
-            (callsign, frequency, spotter, comment, time_spotted, band, mode, cluster_source, created_at) 
-            VALUES (?, ?, ?, ?, NOW(), ?, ?, 'Demo Cluster', NOW())
-        ");
-        
-        foreach ($demoSpots as $spot) {
-            if (rand(1, 4) == 1) { // Add only 25% of demo spots randomly
-                $stmt->execute($spot);
-            }
-        }
-        
-    } catch (Exception $e) {
-        // Silently fail on database errors
-    }
+// Demo spots function removed - real connections only
+
+function getConnectionStatusAPI() {
+    // TODO: Implement real connection status check
+    // For now, return basic status - no hardcoded values
+    jsonResponse([
+        'success' => true,
+        'connected' => false,
+        'message' => 'Connection status check not implemented yet'
+    ]);
 }
 
 function jsonResponse($data, $status = 200) {

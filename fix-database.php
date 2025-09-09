@@ -38,7 +38,15 @@ function loadEnv() {
     
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) {
+        $line = trim($line);
+        
+        // Skip comments and empty lines
+        if (empty($line) || strpos($line, '#') === 0) {
+            continue;
+        }
+        
+        // Split on first = only
+        if (strpos($line, '=') === false) {
             continue;
         }
         
@@ -46,11 +54,16 @@ function loadEnv() {
         $name = trim($name);
         $value = trim($value);
         
-        if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
-            putenv(sprintf('%s=%s', $name, $value));
-            $_ENV[$name] = $value;
-            $_SERVER[$name] = $value;
+        // Remove quotes if present
+        if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') || 
+            (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
+            $value = substr($value, 1, -1);
         }
+        
+        // Set environment variable
+        putenv(sprintf('%s=%s', $name, $value));
+        $_ENV[$name] = $value;
+        $_SERVER[$name] = $value;
     }
     return true;
 }
@@ -82,9 +95,36 @@ if (loadEnv()) {
     echo "✅ .env file loaded successfully<br>";
     echo "📊 Database: " . (getenv('DB_DATABASE') ?: 'dx_cluster_web') . "<br>";
     echo "🏠 Host: " . (getenv('DB_HOST') ?: 'localhost') . "<br>";
+    echo "🔌 Port: " . (getenv('DB_PORT') ?: '3306') . "<br>";
     echo "👤 User: " . (getenv('DB_USERNAME') ?: 'root') . "<br>";
+    
+    // Show password status (masked for security)
+    $password = getenv('DB_PASSWORD');
+    if ($password !== false && $password !== '') {
+        echo "🔑 Password: " . str_repeat('*', strlen($password)) . " (loaded)<br>";
+    } else {
+        echo "<div class='error'>❌ DB_PASSWORD is empty or not found!</div>";
+    }
+    
+    // Debug: Show raw .env content (first 10 lines only)
+    echo "<details><summary>🔍 Debug: .env file content (click to expand)</summary>";
+    echo "<pre style='font-size: 12px; max-height: 200px; overflow-y: auto;'>";
+    $envContent = file_get_contents(__DIR__ . '/.env');
+    $lines = explode("\n", $envContent);
+    foreach (array_slice($lines, 0, 15) as $i => $line) {
+        // Mask password line for security
+        if (strpos($line, 'DB_PASSWORD') !== false) {
+            $line = 'DB_PASSWORD=***MASKED***';
+        }
+        echo ($i + 1) . ": " . htmlspecialchars($line) . "\n";
+    }
+    if (count($lines) > 15) {
+        echo "... (" . (count($lines) - 15) . " more lines)\n";
+    }
+    echo "</pre></details>";
+    
 } else {
-    echo "<div class='error'>❌ .env file not found. Using default values.</div>";
+    echo "<div class='error'>❌ .env file not found at: " . __DIR__ . "/.env</div>";
 }
 echo "</div>";
 

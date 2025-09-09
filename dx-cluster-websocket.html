@@ -204,7 +204,7 @@ function connect() {
     // For localhost testing: ws://localhost:8080
     // For your Ubuntu server: ws://YOUR_SERVER_IP:8080
     // For production with domain: wss://your-domain.com:8080
-    const wsUrl = `ws://localhost:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
+    const wsUrl = `ws://cluster.wavelog.online:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
     
     try {
         ws = new WebSocket(wsUrl);

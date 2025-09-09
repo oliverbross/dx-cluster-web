@@ -138,11 +138,12 @@ connectBtn.addEventListener('click', () => {
   setStatus('connecting', 'Connecting...');
   appendLine(`🔗 Connecting to ${host}:${port} as ${login}...`, 'sys');
   
-  // CHANGE THIS URL TO YOUR UBUNTU SERVER IP!
-  // For local testing: ws://localhost:8080
-  // For your Ubuntu server: ws://YOUR_UBUNTU_IP:8080
-  // For wavelog domain: ws://cluster.wavelog.online:8080
-  const url = `ws://cluster.wavelog.online:8080/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
+  // Auto-detect secure vs insecure WebSocket based on page protocol
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsPort = protocol === 'wss:' ? '8443' : '8080';
+  const wsHost = 'cluster.wavelog.online';  // Your domain
+  
+  const url = `${protocol}//${wsHost}:${wsPort}/?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}&login=${encodeURIComponent(login)}`;
   
   try {
     ws = new WebSocket(url);

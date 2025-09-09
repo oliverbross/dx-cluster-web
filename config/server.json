@@ -1,0 +1,30 @@
+{
+  "port": 8080,
+  "host": "localhost",
+  "websocket": {
+    "enabled": true,
+    "path": "/ws"
+  },
+  "cors": {
+    "enabled": true,
+    "origin": "*",
+    "methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "headers": "Content-Type, Authorization, X-Requested-With"
+  },
+  "logging": {
+    "level": "info",
+    "timestamps": true
+  },
+  "cluster": {
+    "defaultLoginCallsign": "OM0RX",
+    "autoReconnect": true,
+    "reconnectDelay": 30000,
+    "connectionTimeout": 10000,
+    "maxRetries": 3
+  },
+  "wavelog": {
+    "defaultUrl": "https://om0rx.wavelog.online/index.php",
+    "timeout": 30000,
+    "retryAttempts": 2
+  }
+}

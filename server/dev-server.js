@@ -14,7 +14,6 @@ const url = require('url');
 const WebSocket = require('ws');
 const net = require('net');
 
-const PORT = 8080;
 const ROOT_DIR = path.join(__dirname, '..');
 
 // MIME types
@@ -31,66 +30,75 @@ const mimeTypes = {
     '.ico': 'image/x-icon'
 };
 
-// Mock API data
-const mockData = {
-    clusters: [
-        {
-            id: 1,
-            name: 'DX Summit',
-            host: 'dxc.dxsummit.fi',
-            port: 8000,
-            description: 'Popular DX cluster with web interface',
-            is_active: 1
-        },
-        {
-            id: 2,
-            name: 'OH2AQ',
-            host: 'oh2aq.kolumbus.fi',
-            port: 41112,
-            description: 'Finnish DX cluster',
-            is_active: 1
-        },
-        {
-            id: 3,
-            name: 'VE7CC',
-            host: 've7cc.net',
-            port: 23,
-            description: 'Canadian DX cluster',
-            is_active: 1
-        },
-        {
-            id: 4,
-            name: 'W3LPL',
-            host: 'w3lpl.net',
-            port: 7300,
-            description: 'US East Coast DX cluster',
-            is_active: 1
-        },
-        {
-            id: 5,
-            name: 'OM0RX Cluster',
-            host: 'cluster.om0rx.com',
-            port: 7300,
-            description: 'OM0RX Personal DX Cluster',
-            is_active: 1
-        }
-    ],
-    preferences: {
-        theme: 'dark',
-        callsign: 'OM0RX',
-        autoConnect: false,
-        wavelogUrl: 'https://om0rx.wavelog.online/index.php',
-        wavelogApiKey: 'wl2e92dabc940e7',
-        wavelogLogbookSlug: '1',
-        colors: {
-            newDxcc: '#ef4444',
-            newBand: '#22c55e',
-            newMode: '#3b82f6',
-            worked: '#f59e0b',
-            confirmed: '#6b7280'
-        }
-    }
+// Configuration and data storage
+let config = {};
+let mockData = {
+    clusters: [],
+    preferences: {}
 };
+
+// Load configuration from files
+function loadConfiguration() {
+    try {
+        console.log('📁 Loading configuration files...');
+
+        // Load server configuration
+        const serverConfigPath = path.join(ROOT_DIR, 'config', 'server.json');
+        if (fs.existsSync(serverConfigPath)) {
+            config = JSON.parse(fs.readFileSync(serverConfigPath, 'utf8'));
+            console.log('✅ Server configuration loaded');
+        } else {
+            console.log('⚠️ Server configuration file not found, using defaults');
+            config = {
+                port: 8080,
+                host: 'localhost',
+                websocket: { enabled: true },
+                cors: { enabled: true, origin: '*' },
+                cluster: { defaultLoginCallsign: 'OM0RX' }
+            };
+        }
+
+        // Load clusters data
+        const clustersPath = path.join(ROOT_DIR, 'config', 'clusters.json');
+        if (fs.existsSync(clustersPath)) {
+            mockData.clusters = JSON.parse(fs.readFileSync(clustersPath, 'utf8'));
+            console.log(`✅ Loaded ${mockData.clusters.length} clusters`);
+        } else {
+            console.log('⚠️ Clusters configuration file not found');
+            mockData.clusters = [];
+        }
+
+        // Load preferences data
+        const preferencesPath = path.join(ROOT_DIR, 'config', 'preferences.json');
+        if (fs.existsSync(preferencesPath)) {
+            mockData.preferences = JSON.parse(fs.readFileSync(preferencesPath, 'utf8'));
+            console.log('✅ Preferences configuration loaded');
+        } else {
+            console.log('⚠️ Preferences configuration file not found, using defaults');
+            mockData.preferences = {
+                theme: 'dark',
+                callsign: 'DX-WEB',
+                autoConnect: false,
+                colors: {
+                    newDxcc: '#ef4444',
+                    newBand: '#22c55e',
+                    newMode: '#3b82f6',
+                    worked: '#f59e0b',
+                    confirmed: '#6b7280'
+                }
+            };
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading configuration:', error);
+        // Use minimal defaults if loading fails
+        config = { port: 8080, host: 'localhost' };
+        mockData = { clusters: [], preferences: {} };
+    }
+}
+
+// Get port from config or default
+const PORT = config.port || 8080;
 
 // Create server
 const server = http.createServer((req, res) => {
@@ -243,12 +251,11 @@ function handleWavelogProxy(req, res) {
                 return;
             }
 
-            // Build Wavelog API URL using the working example format
-            let baseUrl = data.wavelogUrl || 'https://om0rx.wavelog.online';
+            // Build Wavelog API URL - try different formats
+            let baseUrl = data.wavelogUrl || 'https://om0rx.wavelog.online/index.php';
 
-            // Use the working example format: url.replace(/\/+$/, '') + '/index.php/api'
-            const apiBase = baseUrl.replace(/\/+$/, '') + '/index.php/api';
-            const apiUrl = apiBase + endpoint.replace(/^\//, '/');
+            // Try the direct endpoint format first: /index.php/endpoint
+            const apiUrl = baseUrl + '/' + endpoint.replace(/^\//, '');
 
             // Prepare request data matching the working example format
             let postData;
@@ -885,17 +892,32 @@ function parseDxSpots(data) {
 
             // Extract time from the comment if present
             let extractedTime = new Date().toISOString().slice(11, 15) + 'Z';
+            console.log(`Initial extractedTime: ${extractedTime}`);
+            console.log(`Looking for time in finalCommentToUse: "${finalCommentToUse}"`);
             const timeMatch = finalCommentToUse.match(/(\d{4})Z/);
             if (timeMatch) {
                 const rawTime = timeMatch[1] + 'Z';
                 console.log(`Time match found: ${timeMatch[1]}, rawTime: ${rawTime}`);
+                console.log(`About to call formatTime with: "${rawTime}"`);
                 extractedTime = formatTime(rawTime);
-                console.log(`Formatted time: ${extractedTime}`);
+                console.log(`Formatted time result: ${extractedTime}`);
                 // Remove time from comment
                 finalCommentToUse = finalCommentToUse.replace(/\d{4}Z/, '').trim();
                 console.log(`Comment after time removal: "${finalCommentToUse}"`);
             } else {
-                console.log(`No time match found in comment: "${finalCommentToUse}"`);
+                console.log(`No time match found in finalCommentToUse: "${finalCommentToUse}"`);
+                // Try to extract time from the original extractedComment
+                console.log(`Looking for time in original extractedComment: "${extractedComment}"`);
+                const originalTimeMatch = extractedComment.match(/(\d{4})Z/);
+                if (originalTimeMatch) {
+                    console.log(`Found time in original comment: ${originalTimeMatch[1]}`);
+                    const rawTime = originalTimeMatch[1] + 'Z';
+                    console.log(`About to call formatTime with rawTime from original: "${rawTime}"`);
+                    extractedTime = formatTime(rawTime);
+                    console.log(`Formatted time from original: ${extractedTime}`);
+                } else {
+                    console.log(`No time found in original comment either`);
+                }
             }
 
             spots.push({
@@ -916,48 +938,63 @@ function parseDxSpots(data) {
 
 // Format time string
 function formatTime(timeStr) {
-    if (!timeStr) return 'Unknown';
+    try {
+        if (!timeStr) return 'Unknown';
 
-    console.log(`formatTime called with: "${timeStr}"`);
+        console.log(`formatTime called with: "${timeStr}" (length: ${timeStr.length})`);
 
-    // Handle different time formats
-    if (timeStr.match(/^\d{4}Z$/)) {
-        // Format: 1309Z -> 13:09Z
-        const hours = timeStr.slice(0, 2);
-        const minutes = timeStr.slice(2, 4);
-        const result = `${hours}:${minutes}Z`;
-        console.log(`formatTime: ${timeStr} -> ${result}`);
-        return result;
-    }
-
-    if (timeStr.match(/^\d{1,2}-\w{3}-\d{4}\s+\d{4}Z$/)) {
-        // Format: 9-Sep-2025 1309Z -> 13:09Z
-        const timeMatch = timeStr.match(/(\d{4})Z$/);
-        if (timeMatch) {
-            const hours = timeMatch[1].slice(0, 2);
-            const minutes = timeMatch[1].slice(2, 4);
-            return `${hours}:${minutes}Z`;
+        // Handle different time formats
+        if (timeStr.match(/^\d{4}Z$/)) {
+            // Format: 1309Z -> 13:09Z
+            const hours = timeStr.slice(0, 2);
+            const minutes = timeStr.slice(2, 4);
+            const result = `${hours}:${minutes}Z`;
+            console.log(`formatTime: ${timeStr} -> ${result} (matched 4-digit format)`);
+            return result;
         }
-    }
 
-    if (timeStr.match(/^\d{1,2}:\d{1,2}Z$/)) {
-        // Format: 13:1Z -> 13:01Z (fix single digit minutes)
-        const parts = timeStr.split(':');
-        if (parts.length === 2) {
-            const hours = parts[0].padStart(2, '0');
-            const minutes = parts[1].replace('Z', '').padStart(2, '0');
-            return `${hours}:${minutes}Z`;
+        // Handle format like "1404Z" (should match above, but let's be explicit)
+        if (timeStr.length === 5 && timeStr.endsWith('Z') && /^\d{4}Z$/.test(timeStr)) {
+            const hours = timeStr.slice(0, 2);
+            const minutes = timeStr.slice(2, 4);
+            const result = `${hours}:${minutes}Z`;
+            console.log(`formatTime explicit: ${timeStr} -> ${result}`);
+            return result;
         }
-    }
 
-    // Handle format like "1345Z" (no colon)
-    if (timeStr.match(/^\d{4}Z$/)) {
-        const hours = timeStr.slice(0, 2);
-        const minutes = timeStr.slice(2, 4);
-        return `${hours}:${minutes}Z`;
-    }
+        // Try to handle any 4-digit + Z format
+        if (timeStr.length >= 5 && timeStr.includes('Z')) {
+            const digits = timeStr.replace(/[^0-9]/g, '');
+            if (digits.length === 4) {
+                const hours = digits.slice(0, 2);
+                const minutes = digits.slice(2, 4);
+                const result = `${hours}:${minutes}Z`;
+                console.log(`formatTime fallback: ${timeStr} -> ${result}`);
+                return result;
+            }
+        }
 
-    return timeStr;
+        // Nuclear option - just format it no matter what
+        console.log(`formatTime: nuclear option for: ${timeStr}`);
+        if (timeStr.includes('Z')) {
+            const parts = timeStr.split('Z')[0];
+            const digits = parts.replace(/[^0-9]/g, '');
+            if (digits.length >= 4) {
+                const hours = digits.slice(-4, -2) || '00';
+                const minutes = digits.slice(-2) || '00';
+                const nuclearResult = `${hours}:${minutes}Z`;
+                console.log(`formatTime: nuclear result: ${nuclearResult}`);
+                return nuclearResult;
+            }
+        }
+
+        // If everything fails, just return a default time
+        console.log(`formatTime: complete failure, returning default`);
+        return '00:00Z';
+    } catch (error) {
+        console.log(`formatTime: exception: ${error.message}`);
+        return '00:00Z';
+    }
 }
 
 // Get band from frequency
@@ -1115,13 +1152,19 @@ function detectMode(frequency, comment) {
     return 'CW';
 }
 
+// Load configuration before starting server
+loadConfiguration();
+
 // Start server
-server.listen(PORT, () => {
-    console.log('🚀 DX Cluster Web Development Server started');
-    console.log(`📡 Server running at http://localhost:${PORT}`);
-    console.log(`🔌 WebSocket server running on ws://localhost:${PORT}`);
+server.listen(config.port || PORT, () => {
+    console.log('🚀 DX Cluster Web Server started');
+    console.log(`📡 Server running at http://${config.host || 'localhost'}:${config.port || PORT}`);
+    if (config.websocket?.enabled) {
+        console.log(`🔌 WebSocket server running on ws://${config.host || 'localhost'}:${config.port || PORT}`);
+    }
     console.log('✅ Real Wavelog API integration enabled');
     console.log('✅ Real DX cluster connections enabled');
+    console.log(`📊 Loaded ${mockData.clusters.length} clusters from configuration`);
     console.log('');
     console.log('Available endpoints:');
     console.log('  - GET  /api/clusters.php         - Get DX cluster list');
@@ -1134,6 +1177,11 @@ server.listen(PORT, () => {
     console.log('  - connect: {action: "connect", host: "dxc.dxsummit.fi", port: 8000}');
     console.log('  - disconnect: {action: "disconnect"}');
     console.log('  - send_command: {action: "send_command", command: "show/dx"}');
+    console.log('');
+    console.log('Configuration files:');
+    console.log('  - config/server.json      - Server configuration');
+    console.log('  - config/clusters.json    - DX cluster definitions');
+    console.log('  - config/preferences.json - User preferences');
     console.log('');
     console.log('Press Ctrl+C to stop the server');
 });

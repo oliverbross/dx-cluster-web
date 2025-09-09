@@ -1,0 +1,15 @@
+{
+  "theme": "dark",
+  "callsign": "OM0RX",
+  "autoConnect": false,
+  "wavelogUrl": "https://om0rx.wavelog.online/index.php",
+  "wavelogApiKey": "wl2e92dabc940e7",
+  "wavelogLogbookSlug": "1",
+  "colors": {
+    "newDxcc": "#ef4444",
+    "newBand": "#22c55e",
+    "newMode": "#3b82f6",
+    "worked": "#f59e0b",
+    "confirmed": "#6b7280"
+  }
+}

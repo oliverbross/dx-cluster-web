@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "DX Summit",
+    "host": "dxc.dxsummit.fi",
+    "port": 8000,
+    "description": "Popular DX cluster with web interface",
+    "is_active": 1
+  },
+  {
+    "id": 2,
+    "name": "OH2AQ",
+    "host": "oh2aq.kolumbus.fi",
+    "port": 41112,
+    "description": "Finnish DX cluster",
+    "is_active": 1
+  },
+  {
+    "id": 3,
+    "name": "VE7CC",
+    "host": "ve7cc.net",
+    "port": 23,
+    "description": "Canadian DX cluster",
+    "is_active": 1
+  },
+  {
+    "id": 4,
+    "name": "W3LPL",
+    "host": "w3lpl.net",
+    "port": 7300,
+    "description": "US East Coast DX cluster",
+    "is_active": 1
+  },
+  {
+    "id": 5,
+    "name": "OM0RX Cluster",
+    "host": "cluster.om0rx.com",
+    "port": 7300,
+    "description": "OM0RX Personal DX Cluster",
+    "is_active": 1
+  }
+]
